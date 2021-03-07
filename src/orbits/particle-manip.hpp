@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -28,7 +28,8 @@ License
 
 #include "../dev-tools.hpp"
 #include "orbits.hpp"
-namespace space::orbit {
+
+namespace hub::orbit {
     CREATE_MEMBER_CHECK(mass);
     CREATE_MEMBER_CHECK(pos);
     CREATE_MEMBER_CHECK(vel);
@@ -45,7 +46,7 @@ namespace space::orbit {
      * @return auto The containers contains input particles.
      */
     template <typename Particle, typename... Args>
-    auto cluster(Particle const &ptc1, Particle const &ptc2, Args const &... ptcs) {
+    auto group(Particle const &ptc1, Particle const &ptc2, Args const &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...), "Type of the arguments must be same!");
         return std::array{ptc1, ptc2, ptcs...};
     }
@@ -84,7 +85,7 @@ namespace space::orbit {
      * @return auto The total mass of particles
      */
     template <typename Particle, typename... Args>
-    inline auto M_tot(Particle const &ptc1, Particle const &ptc2, Args const &... args) {
+    inline auto M_tot(Particle const &ptc1, Particle const &ptc2, Args const &...args) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         return (args.mass + ... + (ptc2.mass + ptc1.mass));
@@ -132,11 +133,12 @@ namespace space::orbit {
      * @return auto The centre of mass position of particles.
      */
     template <typename Particle, typename... Args>
-    inline auto COM_p(Particle const &ptc1, Particle const &ptc2, Args const &... ptcs) {
+    inline auto COM_p(Particle const &ptc1, Particle const &ptc2, Args const &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         auto tot_mass = (ptcs.mass + ... + (ptc1.mass + ptc2.mass));
-        auto cm_pos = ((ptcs.mass * ptcs.pos) + ... + (ptc1.mass * ptc1.pos + ptc2.mass * ptc2.pos)) / tot_mass;
+        std::remove_cv_t<decltype(ptc1.pos)> cm_pos =
+            ((ptcs.mass * ptcs.pos) + ... + (ptc1.mass * ptc1.pos + ptc2.mass * ptc2.pos)) / tot_mass;
         return cm_pos;
     }
 
@@ -184,11 +186,12 @@ namespace space::orbit {
      * @return auto The centre of mass velocity of particles.
      */
     template <typename Particle, typename... Args>
-    inline auto COM_v(Particle const &ptc1, Particle const &ptc2, Args const &... ptcs) {
+    inline auto COM_v(Particle const &ptc1, Particle const &ptc2, Args const &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         auto tot_mass = (ptcs.mass + ... + (ptc1.mass + ptc2.mass));
-        auto cm_vel = ((ptcs.mass * ptcs.vel) + ... + (ptc1.mass * ptc1.vel + ptc2.mass * ptc2.vel)) / tot_mass;
+        std::remove_cv_t<decltype(ptc1.vel)> cm_vel =
+            ((ptcs.mass * ptcs.vel) + ... + (ptc1.mass * ptc1.vel + ptc2.mass * ptc2.vel)) / tot_mass;
 
         return cm_vel;
     }
@@ -222,7 +225,7 @@ namespace space::orbit {
      */
     template <typename Vector, typename Cluster>
     void move_particles_pos(Vector const &centre_mass_pos, Cluster &ptc) {
-        auto dp = centre_mass_pos - COM_p(ptc);
+        Vector dp = centre_mass_pos - COM_p(ptc);
         if constexpr (is_ranges_v<Cluster>) {
             for (auto &p : ptc) {
                 p.pos += dp;
@@ -244,10 +247,10 @@ namespace space::orbit {
      * @param[in,out] ptcs The rest particles need to be moved.
      */
     template <typename Vector, typename Particle, typename... Args>
-    void move_particles_pos(Vector const &centre_mass_pos, Particle &ptc1, Particle &ptc2, Args &... ptcs) {
+    void move_particles_pos(Vector const &centre_mass_pos, Particle &ptc1, Particle &ptc2, Args &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
-        auto dp = centre_mass_pos - COM_p(ptc1, ptc2, ptcs...);
+        Vector dp = centre_mass_pos - COM_p(ptc1, ptc2, ptcs...);
         ptc1.pos += dp, ptc2.pos += dp;
         (..., (ptcs.pos += dp));
     }
@@ -263,7 +266,7 @@ namespace space::orbit {
      */
     template <typename Vector, typename Cluster>
     void move_particles_vel(Vector const &centre_mass_vel, Cluster &ptc) {
-        auto dv = centre_mass_vel - COM_v(ptc);
+        Vector dv = centre_mass_vel - COM_v(ptc);
         if constexpr (is_ranges_v<Cluster>) {
             for (auto &p : ptc) {
                 p.vel += dv;
@@ -285,10 +288,10 @@ namespace space::orbit {
      * @param[in,out] ptcs The rest particles need to be moved.
      */
     template <typename Vector, typename Particle, typename... Args>
-    void move_particles_vel(Vector const &centre_mass_vel, Particle &ptc1, Particle &ptc2, Args &... ptcs) {
+    void move_particles_vel(Vector const &centre_mass_vel, Particle &ptc1, Particle &ptc2, Args &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
-        auto dv = centre_mass_vel - COM_v(ptc1, ptc2, ptcs...);
+        Vector dv = centre_mass_vel - COM_v(ptc1, ptc2, ptcs...);
         ptc1.vel += dv, ptc2.vel += dv;
         (..., (ptcs.vel += dv));
     }
@@ -306,8 +309,8 @@ namespace space::orbit {
      */
     template <typename Vector, typename Cluster>
     void move_particles(Vector const &centre_mass_pos, Vector const &centre_mass_vel, Cluster &ptc) {
-        auto dp = centre_mass_pos - COM_p(ptc);
-        auto dv = centre_mass_vel - COM_v(ptc);
+        decltype(centre_mass_pos) dp = centre_mass_pos - COM_p(ptc);
+        decltype(centre_mass_vel) dv = centre_mass_vel - COM_v(ptc);
         if constexpr (is_ranges_v<Cluster>) {
             for (auto &p : ptc) {
                 p.pos += dp;
@@ -333,11 +336,11 @@ namespace space::orbit {
      */
     template <typename Vector, typename Particle, typename... Args>
     void move_particles(Vector const &centre_mass_pos, Vector const &centre_mass_vel, Particle &ptc1, Particle &ptc2,
-                        Args &... ptcs) {
+                        Args &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
-        auto dp = centre_mass_pos - COM_p(ptc1, ptc2, ptcs...);
-        auto dv = centre_mass_vel - COM_v(ptc1, ptc2, ptcs...);
+        Vector dp = centre_mass_pos - COM_p(ptc1, ptc2, ptcs...);
+        Vector dv = centre_mass_vel - COM_v(ptc1, ptc2, ptcs...);
         ptc1.pos += dp, ptc1.vel += dv;
         ptc2.pos += dp, ptc2.vel += dv;
         (..., (ptcs.pos += dp, ptcs.vel += dv));
@@ -347,7 +350,6 @@ namespace space::orbit {
      * @brief Move the centre of mass position and velocity of particles/a cluster of particles/single particle to the
      * corresponding position and velocity of a Kepler orbit.
      *
-     * @tparam Scalar Floating point like type for KeplerOrbit.
      * @tparam Particle Type of the first particle/std::ranges(Container) with element type has public member
      * `mass`(Scalar), `pos`(Vector) and `vel`(Vector)..
      * @tparam Args Type of the particles if exits, should be same as Particle.
@@ -355,11 +357,11 @@ namespace space::orbit {
      * @param[in,out] ptc1 The first particle/The cluster/single particle needs to be moved.
      * @param[in,out] ptcs The rest particles need to be moved.
      */
-    template <typename Scalar, typename Particle, typename... Args>
-    void move_particles(KeplerOrbit<Scalar> const &orbit, Particle &ptc1, Args &... ptcs) {
+    template <typename Particle, typename... Args>
+    void move_particles(KeplerOrbit<typename Particle::Scalar> const &orbit, Particle &ptc1, Args &...ptcs) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 2nd argument and the rest should be same!");
-        auto [cm_pos, cm_vel] = orbit_to_coord(orbit);
+        auto [cm_pos, cm_vel] = orbit_to_coord<typename Particle::Vector>(orbit);
         move_particles(cm_pos, cm_vel, ptc1, ptcs...);
     }
 
@@ -372,8 +374,8 @@ namespace space::orbit {
      * @param[in,out] ptc The particles/The cluster/single particle needs to be moved.
      */
     template <typename... Particle>
-    void move_to_COM_frame(Particle &... ptc) {
-        using Vector = decltype(COM_v(ptc...));
+    void move_to_COM_frame(Particle &...ptc) {
+        using Vector = std::remove_cv_t<decltype(COM_v(ptc...))>;
         move_particles(Vector{0, 0, 0}, Vector{0, 0, 0}, ptc...);
     }
 
@@ -509,7 +511,7 @@ namespace space::orbit {
     template <typename Cluster>
     auto E_k(Cluster const &ptc) {
         if constexpr (is_ranges_v<Cluster>) {
-            decltype(M_tot(ptc)) kinetic_energy = 0;
+            std::remove_cv_t<decltype(M_tot(ptc))> kinetic_energy = 0;
 
             for (auto &p : ptc) {
                 kinetic_energy += p.mass * dot(p.vel, p.vel);
@@ -532,7 +534,7 @@ namespace space::orbit {
      * @return auto The kinetic energy of particles.
      */
     template <typename Particle, typename... Args>
-    auto E_k(Particle const &ptc1, Particle const &ptc2, Args const &... args) {
+    auto E_k(Particle const &ptc1, Particle const &ptc2, Args const &...args) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
 
@@ -575,7 +577,7 @@ namespace space::orbit {
      * @return auto The potential energy of particles.
      */
     template <typename Particle, typename... Args>
-    auto E_p(Particle const &ptc1, Particle const &ptc2, Args const &... args) {
+    auto E_p(Particle const &ptc1, Particle const &ptc2, Args const &...args) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         return E_p(cluster(ptc1, ptc2, args...));
@@ -607,7 +609,7 @@ namespace space::orbit {
      * @return auto The kinetic energy of the centre of mass of particles.
      */
     template <typename Particle, typename... Args>
-    auto E_k_COM(Particle const &ptc1, Particle const &ptc2, Args const &... args) {
+    auto E_k_COM(Particle const &ptc1, Particle const &ptc2, Args const &...args) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         auto m_tot = M_tot(ptc1, ptc2, args...);
@@ -624,7 +626,7 @@ namespace space::orbit {
      * @return auto The total energy.
      */
     template <typename... Particle>
-    inline auto E_tot(Particle const &... ptc) {
+    inline auto E_tot(Particle const &...ptc) {
         return E_k(ptc...) + E_p(ptc...);
     }
 
@@ -637,14 +639,14 @@ namespace space::orbit {
      * @return auto The inner energy.
      */
     template <typename... Particle>
-    inline auto E_inner(Particle const &... ptc) {
+    inline auto E_inner(Particle const &...ptc) {
         return E_tot(ptc...) - E_k_COM(ptc...);
     }
 
     /**
      * @brief Calculate the size of a cluster/single particle.
      *
-     * The size of the cluster are calculated by detecting the farest distance between two particles in this cluster.
+     * The size of the cluster are calculated by detecting the farthest distance between two particles in this cluster.
      *
      * @tparam Cluster std::ranges(Container) with element type has public member `mass`(Scalar), `pos`(Vector) and
      * `vel`(Vector)./Type of single particle.
@@ -681,7 +683,7 @@ namespace space::orbit {
     /**
      * @brief Calculate the size of a set of particles.
      *
-     * The size of the cluster are calculated by detecting the farest distance between two particles in this cluster.
+     * The size of the cluster are calculated by detecting the farthest distance between two particles in this cluster.
      *
      * @tparam Particle Type of the particle with public member `mass`(Scalar), `pos`(Vector) and `vel`(Vector).
      * @tparam Args Type of the particles, should be same as Particle.
@@ -691,7 +693,7 @@ namespace space::orbit {
      * @return auto The size of the cluster.
      */
     template <typename Particle, typename... Args>
-    auto cluster_size(Particle const &ptc1, Particle const &ptc2, Args const &... args) {
+    auto cluster_size(Particle const &ptc1, Particle const &ptc2, Args const &...args) {
         static_assert(calc::all(std::is_same_v<Args, Particle>...),
                       "Type of the 1st argument and the rest should be same!");
         return cluster_size(cluster(ptc1, ptc2, args...));
@@ -729,7 +731,6 @@ namespace space::orbit {
      * `vel`(Vector)./Type of single particle.
      * @tparam Cluster2 std::ranges(Container) with element type has public member `mass`(Scalar), `pos`(Vector) and
      * `vel`(Vector)./Type of single particle.
-     * @tparam Scalar Floating point like type.
      * @param[in] cluster1 The first cluster/first single particle.
      * @param[in] cluster2 The second cluster/first single particle.
      * @return auto The tidal potential energy.
@@ -802,6 +803,8 @@ namespace space::orbit {
      */
     template <typename Cluster1, typename Cluster2, typename Scalar>
     auto tidal_radius(Scalar tidal_factor, Cluster1 const &cluster1, Cluster2 const &cluster2, Scalar R2) {
+        static_assert(is_ranges_v<Cluster1>);
+        static_assert(is_ranges_v<Cluster2>);
         auto m_tot1 = orbit::M_tot(cluster1);
         auto m_tot2 = orbit::M_tot(cluster2);
 
@@ -827,4 +830,4 @@ namespace space::orbit {
         return tidal_radius(tidal_factor, cluster1, cluster2, R2);
     }
 
-}  // namespace space::orbit
+}  // namespace hub::orbit

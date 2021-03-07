@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -32,7 +32,7 @@ License
 #include <type_traits>
 
 #include "type-class.hpp"
-namespace space::concepts {
+namespace hub::concepts {
 
 #define INSTANCE(X) std::declval<X>()
 
@@ -163,7 +163,7 @@ namespace space::concepts {
         Vector vel;
     };
     struct TestParticles {
-        SPACEHUB_USING_TYPE_SYSTEM_OF(TestParticle)
+        SPACEHUB_USING_TYPE_SYSTEM_OF(TestParticle);
         using Particle = TestParticle;
         Scalar &time();
         IdxArray &idn();
@@ -231,7 +231,7 @@ namespace space::concepts {
     // template <typename T>
     // concept Integrator = requires(T i){};
 
-}  // namespace space::concepts
+}  // namespace hub::concepts
 
 #define CONCEPT_PARTICLE concepts::Particle
 #define CONCEPT_PARTICLES concepts::Particles
@@ -241,7 +241,7 @@ namespace space::concepts {
 #define CONCEPT_INTERACTION concepts::Interaction
 #define CONCEPT_PARTICLE_CONTAINER concepts::ParticleContainer
 #define CONCEPT_FORCE concepts::Force
-#define CONCEPT_STEP_CONTROLER concepts::StepControler
+#define CONCEPT_STEP_CONTROLLER concepts::StepControler
 
 #else
 
@@ -253,5 +253,5 @@ namespace space::concepts {
 #define CONCEPT_INTERACTION typename
 #define CONCEPT_PARTICLE_CONTAINER typename
 #define CONCEPT_FORCE typename
-#define CONCEPT_STEP_CONTROLER typename
+#define CONCEPT_STEP_CONTROLLER typename
 #endif

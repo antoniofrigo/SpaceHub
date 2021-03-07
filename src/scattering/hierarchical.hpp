@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -30,18 +30,18 @@ License
 #include "../vector/vector3.hpp"
 
 /**
- * @namespace space::scattering
+ * @namespace hub::scattering
  * namespace for scattering
  */
-namespace space::scattering {
+namespace hub::scattering {
 
     template <typename Vector>
     class HierarchicalNode {
        public:
-        Vector pos;
-        Vector vel;
-        double mass;
-        size_t weight;
+        Vector pos{0};
+        Vector vel{0};
+        double mass{0};
+        size_t weight{0};
         std::string name;
     };
     /*template <typename Node>
@@ -52,7 +52,7 @@ namespace space::scattering {
     CREATE_MEMBER_CHECK(m)
 
     template <typename Particles, typename Node>
-    void create_init_list(Particles const& ptc, std::vector<Node>& vec) {
+    void create_init_list(Particles const &ptc, std::vector<Node> &vec) {
         size_t p_num = ptc.number();
         vec.clear();
         vec.reserve(p_num);
@@ -66,11 +66,11 @@ namespace space::scattering {
     }
 
     template <typename Nodes>
-    bool check_most_bound(Nodes const& vec, size_t idx, double amin) {
+    bool check_most_bound(Nodes const &vec, size_t idx, double amin) {
         for (size_t i = 1; i < vec.size(); i++) {
             if (i != idx) {
-                auto [a, e] =
-                    orbit::calc_a_e(vec[idx].mass + vec[i].mass, vec[idx].pos - vec[i].pos, vec[idx].vel - vec[i].vel);
+                auto[a, e] =
+                orbit::calc_a_e(vec[idx].mass + vec[i].mass, vec[idx].pos - vec[i].pos, vec[idx].vel - vec[i].vel);
                 if (0 < a && a < amin) {
                     return false;
                 }
@@ -80,7 +80,7 @@ namespace space::scattering {
     }
 
     template <typename Nodes>
-    bool check_unbound(Nodes const& vec) {
+    bool check_unbound(Nodes const &vec) {
         double pot = 0;
         for (size_t i = 1; i < vec.size(); i++) {
             pot = -vec[i].mass / norm(vec[0].pos - vec[i].pos);
@@ -89,24 +89,23 @@ namespace space::scattering {
     }
 
     template <typename Nodes>
-    std::string hierarchical_to_string(Nodes& vec) {
-        std::sort(vec.begin(), vec.end(), [](auto& x, auto& y) -> bool { return x.weight < y.weight; });
+    std::string hierarchical_to_string(Nodes &vec) {
+        std::sort(vec.begin(), vec.end(), [](auto &x, auto &y) -> bool { return x.weight < y.weight; });
         std::string out;
-        for (auto const& v : vec) {
+        for (auto const &v : vec) {
             out += v.name;
         }
         return out;
     }
 
     template <typename Particles>
-    std::string get_hierarchical_struct(Particles const& ptc) {
+    std::string get_hierarchical_struct(Particles const &ptc) {
         using Vector = decltype(ptc[0].pos);
         using Node = HierarchicalNode<Vector>;
         std::vector<Node> vec{0};
         create_init_list(ptc, vec);
         std::vector<Node> vec_out;
         vec_out.reserve(vec.size());
-        std::string out;
         for (; vec.size() > 0;) {
             Vector p0 = vec[0].pos;
             Vector v0 = vec[0].vel;
@@ -114,7 +113,7 @@ namespace space::scattering {
             double amin = 1e99;
             size_t idx = 0;
             for (size_t i = 1; i < vec.size(); i++) {
-                auto [a, e] = orbit::calc_a_e(m0 + vec[i].mass, p0 - vec[i].pos, v0 - vec[i].vel);
+                auto[a, e] = orbit::calc_a_e(m0 + vec[i].mass, p0 - vec[i].pos, v0 - vec[i].vel);
                 if (0 < a && a < amin) {
                     idx = i;
                     amin = a;
@@ -136,11 +135,11 @@ namespace space::scattering {
                     Vector p1 = vec[idx].pos;
                     Vector v1 = vec[idx].vel;
                     if (vec[0].weight < vec[idx].weight) {
-                        vec.emplace_back(Node{(m0 * p0 + m1 * p1) / mt, (m0 * v0 + m1 * p1) / mt, mt,
+                        vec.emplace_back(Node{(m0 * p0 + m1 * p1) / mt, (m0 * v0 + m1 * v1) / mt, mt,
                                               vec[0].weight + vec[idx].weight,
                                               "(" + vec[0].name + "," + vec[idx].name + ")"});
                     } else {
-                        vec.emplace_back(Node{(m0 * p0 + m1 * p1) / mt, (m0 * v0 + m1 * p1) / mt, mt,
+                        vec.emplace_back(Node{(m0 * p0 + m1 * p1) / mt, (m0 * v0 + m1 * v1) / mt, mt,
                                               vec[0].weight + vec[idx].weight,
                                               "(" + vec[idx].name + "," + vec[0].name + ")"});
                     }
@@ -154,4 +153,4 @@ namespace space::scattering {
         return hierarchical_to_string(vec_out);
     }
 
-}  // namespace space::scattering
+}  // namespace hub::scattering

@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -25,17 +25,19 @@ License
  */
 #pragma once
 
+#include <cassert>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <memory>
 
+#include "../core-computation.hpp"
 #include "../dev-tools.hpp"
-
 /**
- * @namespace space::run_operations
- * Documentation for run_operations
+ * @namespace hub::callback
+ * Documentation for callback
  */
-namespace space::run_operations {
+namespace hub::callback {
 
     /*---------------------------------------------------------------------------*\
      Class TimeSlice Declaration
@@ -48,14 +50,14 @@ namespace space::run_operations {
      * implement equal time operation in simulations. For example, one can provide a
      * printer `[](auto&p){std::cout << p << std::endl;}` as the pre_step_operation
      * in RunArgs to output the state of the integrated system. This printer then
-     * will be invoked before every step integration. The output might be very dense
+     * will be invoked before every step. The output might be very dense
      * sometimes, thus outputting the result of every step is somewhat heavy. If one
      * wraps the printer with TimeSlice, `TimeSlice([](auto&p){std::cout << p <<
      * '\n'}, 0, 100, 10)`, then the output will be performed only at
      * p.time()=[0,100/10, 2*100/10, 3*100/10,...100].
      * @tparam Operation Callable object.
      */
-    template <typename Operation>
+    template <typename Operation, typename Scalar>
     class TimeSlice {
        public:
         SPACEHUB_MAKE_CONSTRUCTORS(TimeSlice, default, default, default, default, default);
@@ -68,7 +70,7 @@ namespace space::run_operations {
          * @param[in] opt_num The bin number of the time slice. i.e time interval =
          * (end-start)/opt_num
          */
-        TimeSlice(Operation const& opt, double start, double end, size_t opt_num = 5000);
+        TimeSlice(Operation const& opt, Scalar start, Scalar end, size_t opt_num = 5000);
 
         /**
          * Callable interface.
@@ -98,15 +100,15 @@ namespace space::run_operations {
          * @param[in] opt_num The bin number of the time slice. i.e time interval =
          * (end-start)/opt_num
          */
-        void reset_slice_params(double start, double end, size_t opt_num = 5000);
+        void reset_slice_params(Scalar start, Scalar end, size_t opt_num = 5000);
 
         Operation operation() { return opt_; };
 
        private:
         Operation opt_;
-        double opt_time_{0};
-        double end_time_{0};
-        double opt_interval_{0};
+        Scalar opt_time_{0};
+        Scalar end_time_{0};
+        Scalar opt_interval_{0};
     };
 
     /*---------------------------------------------------------------------------*\
@@ -173,16 +175,77 @@ namespace space::run_operations {
     };
 
     /*---------------------------------------------------------------------------*\
+        Class LogTimeSlice Declaration
+       \*---------------------------------------------------------------------------*/
+    /**
+
+     * @tparam Operation Callable object.
+     */
+    template <typename Operation, typename Scalar>
+    class LogTimeSlice {
+       public:
+        SPACEHUB_MAKE_CONSTRUCTORS(LogTimeSlice, default, default, default, default, default);
+
+        /**
+         * Constructor of the time slice
+         * @param[in] opt Callable object
+         * @param[in] start The start time of the time slice
+         * @param[in] end The end time of the time slice
+         * @param[in] opt_num The bin number of the time slice. i.e time interval =
+         * (end-start)/opt_num
+         */
+        LogTimeSlice(Operation const& opt, Scalar start, Scalar end, size_t opt_num = 5000);
+
+        /**
+         * Callable interface.
+         * @tparam ParticleSys Any type provides method `time()`
+         * @param[in,out] ptc Input parameter.
+         * @param[in] step_size The step size of the integration.
+         */
+        template <typename ParticleSys>
+        inline auto operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) -> std::enable_if_t<
+            std::is_same_v<void, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, void>;
+
+        /**
+         * Callable interface.
+         * @tparam ParticleSys Any type provides method `time()`
+         * @param[in,out] ptc Input parameter.
+         * @param[in] step_size The step size of the integration.
+         * @return auto bool
+         */
+        template <typename ParticleSys>
+        inline auto operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) -> std::enable_if_t<
+            std::is_same_v<bool, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, bool>;
+
+        /**
+         * Reset the slice parameters.
+         * @param[in] start The start time of the time slice.
+         * @param[in] end The end time of the time slice.
+         * @param[in] opt_num The bin number of the time slice. i.e time interval =
+         * (end-start)/opt_num
+         */
+        void reset_slice_params(Scalar start, Scalar end, size_t opt_num = 5000);
+
+        Operation operation() { return opt_; };
+
+       private:
+        Operation opt_;
+        Scalar opt_time_{0};
+        Scalar start_time_{0};
+        Scalar end_time_{0};
+        Scalar opt_interval_{1};
+    };
+    /*---------------------------------------------------------------------------*\
      Class DefaultWriter Declaration
     \*---------------------------------------------------------------------------*/
     /**
-     * Default outputer for RunArgs. This class serves as a callable callback object
+     * Default output writer for RunArgs. This class serves as a callable callback object
      * to output data to a file stream.
      */
     class DefaultWriter {
        public:
         /**
-         * Constructor of the outputer.
+         * Constructor of the output writer.
          * @param file_name The file name of the output file stream.
          */
         explicit DefaultWriter(std::string const& file_name);
@@ -201,20 +264,54 @@ namespace space::run_operations {
 
        private:
         std::shared_ptr<std::ofstream> fstream_;
+        bool header{false};
+    };
+
+    /*---------------------------------------------------------------------------*\
+     Class EnergyErrWriter Declaration
+    \*---------------------------------------------------------------------------*/
+    /**
+     * Default error writer for RunArgs. This class serves as a callable callback object
+     * to output data to a file stream.
+     */
+    class EnergyErrWriter {
+       public:
+        /**
+         * Constructor of the error writer.
+         * @param file_name The file name of the output file stream.
+         */
+        explicit EnergyErrWriter(std::string const& file_name);
+
+        /**
+         * Callable interface.
+         * @tparam ParticleSys Any type provides method `time()`
+         * @param[in,out] ptc Input parameter.
+         * @param[in] step_size The step size of the integration.
+         */
+        template <typename ParticleSys>
+        inline void operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size);
+
+        template <typename T>
+        friend EnergyErrWriter& operator<<(EnergyErrWriter& wtr, T const& d);
+
+       private:
+        std::shared_ptr<std::ofstream> fstream_;
     };
 
     /*---------------------------------------------------------------------------*\
      Class TimeSlice Definition
     \*---------------------------------------------------------------------------*/
-    template <typename Operation>
-    TimeSlice<Operation>::TimeSlice(const Operation& opt, double start, double end, size_t opt_num)
-        : opt_{opt}, opt_time_{start}, end_time_{end}, opt_interval_{(end - start) / opt_num} {}
+    template <typename Operation, typename Scalar>
+    TimeSlice<Operation, Scalar>::TimeSlice(const Operation& opt, Scalar start, Scalar end, size_t opt_num)
+        : opt_{opt}, opt_time_{start}, end_time_{end}, opt_interval_{(end - start) / opt_num} {
+        assert(end >= start);
+    }
 
-    template <typename Operation>
+    template <typename Operation, typename Scalar>
     template <typename ParticleSys>
-    auto TimeSlice<Operation>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) -> std::enable_if_t<
-        std::is_same_v<void, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, void> {
-        using Scalar = typename ParticleSys::Scalar;
+    auto TimeSlice<Operation, Scalar>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size)
+        -> std::enable_if_t<
+            std::is_same_v<void, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, void> {
         auto t = ptc.time();
         if (t >= static_cast<Scalar>(opt_time_) && t <= end_time_) {
             opt_time_ += opt_interval_;
@@ -222,11 +319,11 @@ namespace space::run_operations {
         }
     }
 
-    template <typename Operation>
+    template <typename Operation, typename Scalar>
     template <typename ParticleSys>
-    auto TimeSlice<Operation>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) -> std::enable_if_t<
-        std::is_same_v<bool, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, bool> {
-        using Scalar = typename ParticleSys::Scalar;
+    auto TimeSlice<Operation, Scalar>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size)
+        -> std::enable_if_t<
+            std::is_same_v<bool, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, bool> {
         auto t = ptc.time();
         if (ptc.time() >= static_cast<Scalar>(opt_time_) && t <= end_time_) {
             opt_time_ += opt_interval_;
@@ -236,8 +333,8 @@ namespace space::run_operations {
         }
     }
 
-    template <typename Operation>
-    void TimeSlice<Operation>::reset_slice_params(double start, double end, size_t opt_num) {
+    template <typename Operation, typename Scalar>
+    void TimeSlice<Operation, Scalar>::reset_slice_params(Scalar start, Scalar end, size_t opt_num) {
         opt_time_ = start;
         end_time_ = end;
         opt_interval_ = (end - start) / opt_num;
@@ -280,6 +377,48 @@ namespace space::run_operations {
     }
 
     /*---------------------------------------------------------------------------*\
+        Class LogTimeSlice Definition //TODO
+    \*---------------------------------------------------------------------------*/
+    template <typename Operation, typename Scalar>
+    LogTimeSlice<Operation, Scalar>::LogTimeSlice(const Operation& opt, Scalar start, Scalar end, size_t opt_num)
+        : opt_{opt}, opt_time_{start}, start_time_{start}, end_time_{end}, opt_interval_{log(end - start) / opt_num} {
+        assert(end >= start);
+    }
+
+    template <typename Operation, typename Scalar>
+    template <typename ParticleSys>
+    auto LogTimeSlice<Operation, Scalar>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size)
+        -> std::enable_if_t<
+            std::is_same_v<void, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, void> {
+        auto t = ptc.time();
+        if (t >= static_cast<Scalar>(opt_time_) && t <= end_time_) {
+            opt_time_ = (opt_time_ - start_time_) * opt_interval_ + start_time_;
+            opt_(ptc, step_size);
+        }
+    }
+
+    template <typename Operation, typename Scalar>
+    template <typename ParticleSys>
+    auto LogTimeSlice<Operation, Scalar>::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size)
+        -> std::enable_if_t<
+            std::is_same_v<bool, std::result_of_t<Operation(ParticleSys&, typename ParticleSys::Scalar)>>, bool> {
+        auto t = ptc.time();
+        if (ptc.time() >= static_cast<Scalar>(opt_time_) && t <= end_time_) {
+            opt_time_ += opt_interval_;
+            return opt_(ptc, step_size);
+        } else {
+            return false;
+        }
+    }
+
+    template <typename Operation, typename Scalar>
+    void LogTimeSlice<Operation, Scalar>::reset_slice_params(Scalar start, Scalar end, size_t opt_num) {
+        opt_time_ = start;
+        end_time_ = end;
+        opt_interval_ = (end - start) / opt_num;
+    }
+
+    /*---------------------------------------------------------------------------*\
        Class DefaultWriter Definition
     \*---------------------------------------------------------------------------*/
     DefaultWriter::DefaultWriter(std::string const& file_name) : fstream_{std::make_shared<std::ofstream>(file_name)} {
@@ -292,10 +431,12 @@ namespace space::run_operations {
 
     template <typename ParticleSys>
     void DefaultWriter::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) {
-        if (ptc.time() == 0) [[unlikely]] {
+        if (header) {
+            *fstream_ << ptc << '\n';
+        } else {
             *fstream_ << ptc.column_names() << '\n';
+            header = true;
         }
-        *fstream_ << ptc << std::endl;  //'\n';
     }
 
     template <typename T>
@@ -303,4 +444,28 @@ namespace space::run_operations {
         (*wtr.fstream_) << d;
         return wtr;
     }
-}  // namespace space::run_operations
+
+    /*---------------------------------------------------------------------------*\
+       Class EnergyErrWriter Definition
+    \*---------------------------------------------------------------------------*/
+    EnergyErrWriter::EnergyErrWriter(std::string const& file_name)
+        : fstream_{std::make_shared<std::ofstream>(file_name)} {
+        if (!fstream_->is_open()) {
+            spacehub_abort("Fail to open the file " + file_name);
+        } else {
+            (*fstream_) << std::scientific << std::setprecision(16);
+        }
+    }
+
+    template <typename ParticleSys>
+    void EnergyErrWriter::operator()(ParticleSys& ptc, typename ParticleSys::Scalar step_size) {
+        static typename ParticleSys::Scalar E0 = calc::calc_total_energy(ptc);
+        *fstream_ << ptc.time() << ',' << calc::calc_energy_error(ptc, E0) << '\n';
+    }
+
+    template <typename T>
+    EnergyErrWriter& operator<<(EnergyErrWriter& wtr, const T& d) {
+        (*wtr.fstream_) << d;
+        return wtr;
+    }
+}  // namespace hub::callback

@@ -11,69 +11,31 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
-#include "../../src/spaceHub.hpp"
+
 #include "rtest_samples.hpp"
-
-USING_NAMESPACE_SPACEHUB_ALL;
-
-template <typename simulation>
-void run(std::string const &sim_type) {
-    auto twobody_sys = kozai<simulation>();
-
-    basic_error_test<simulation>("kozai-" + sim_type, 10000_year, 1e-15, twobody_sys);
-
-    auto [rtol, error] = error_scale<simulation>(2e-16, 1e-11, 10000_year, twobody_sys);
-
-    std::fstream err_stream{"kozai-" + sim_type + ".scale", std::ios::out};
-
-    err_stream << rtol << '\n' << error;
-}
-
+#include "rtest_utility.hpp"
+using namespace hub::unit;
 int main(int argc, char **argv) {
-    using type = Types<double_p>;
+    auto system = kozai();
 
-    using force = interactions::Interactions<interactions::NewtonianGrav>;
+    double t_end = 1e5_year;
 
-    using particles = PointParticles<type>;
+    std::string system_name = "kozai";
 
-    using sim_sys = SimpleSystem<particles, force>;
+    double r_tol = 1e-14;
 
-    using regu_sys = RegularizedSystem<particles, force, ReguType::LogH>;
+    fast_test_methods(system_name, system, t_end, r_tol);
 
-    using chain_sys = ChainSystem<particles, force>;
+    bench_mark_methods(system_name, system, t_end, r_tol);
 
-    using arch_sys = ARchainSystem<particles, force, ReguType::LogH>;
-
-    using base_integrator = LeapFrogDKD<type>;
-    //    using iter = ConstOdeIterator<Symplectic2nd>;
-
-    using err_estimator = WorstOffender<type>;
-
-    using step_controller = PIDController<type>;
-
-    using iter = BurlishStoer<base_integrator, err_estimator, step_controller>;
-
-    using ias15_iter = IAS15<integrator::GaussDadau<type>, IAS15Error<type>, step_controller>;
-
-    using space_iter = BisecOdeIterator<integrator::Symplectic6th<type>, WorstOffender<type>, step_controller>;
-
-    run<Simulator<sim_sys, iter>>("sim");
-
-    run<Simulator<regu_sys, iter>>("regu");
-
-    run<Simulator<chain_sys, iter>>("chain");
-
-    run<Simulator<arch_sys, iter>>("arch");
-
-    // run<Simulator<sim_sys, ias15_iter>>("ias15");
-
-    run<Simulator<arch_sys, space_iter>>("space");
-
+    /*double r_tol_low = 5e-16;
+    double r_tol_hi = 1e-6;
+    err_scale_methods(system_name, system, t_end, r_tol_low, r_tol_hi);*/
     return 0;
 }

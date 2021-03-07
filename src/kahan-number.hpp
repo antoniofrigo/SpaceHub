@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -26,7 +26,10 @@ License
 
 #include "math.hpp"
 
-namespace space {
+#ifdef MPFR_VERSION_MAJOR
+#include "mpfr.hpp"
+#endif
+namespace hub {
     /** Kahan number
      *
      *  A way to reduce the round off error when adding a small number to a big one.
@@ -48,31 +51,31 @@ namespace space {
          * Single parameter constructor.
          * @param r Scalar
          */
-        Kahan(T r) : real(r), err(0){};
+        constexpr Kahan(T r) : real(r), err(0){};
 
         /**
          * Copy constructor.
          * @param k
          */
-        Kahan(const Kahan &k) : real(k.real), err(k.err){};
+        constexpr Kahan(const Kahan &k) : real(k.real), err(k.err){};
 
         /**
          * Assignment operator.
          */
-        inline Kahan &operator=(const Kahan &hs) {
-            real = hs.real, err = hs.err;
-            return *this;
-        }
+        // inline Kahan &operator=(const Kahan &hs) {
+        //   real = hs.real, err = hs.err;
+        //   return *this;
+        //}
 
         /**
          * Conversion operator. Convert Khan number to Scalar i.e `double`, `float`,...
          */
-        inline operator T() { return real; }
+        inline constexpr operator T() { return real; }
 
         /**
          * Conversion operator. Convert Khan number to Scalar i.e `double`, `float`,...
          */
-        inline operator T() const { return real; }
+        inline constexpr operator T() const { return real; }
 
         /**
          * Set error to 0.
@@ -400,12 +403,17 @@ namespace space {
     };
 
     // Neumaier<double>;//Kahan<double>;
+    using long_double_k = Kahan<long double>;
     using double_k = Kahan<double>;
     using float_k = Kahan<float>;
-
+#ifdef MPFR_VERSION_MAJOR
+    using mpreal_k = Kahan<mpfr::mpreal>;
+#endif
+    using long_double_p = Neumaier<long double>;
     using double_p = Neumaier<double>;
     using float_p = Neumaier<float>;
 
+    using long_double_e = Klein<long double>;
     using double_e = Klein<double>;
     using float_e = Klein<float>;
-}  // namespace space
+}  // namespace hub

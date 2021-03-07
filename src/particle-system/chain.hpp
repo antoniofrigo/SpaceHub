@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -30,7 +30,7 @@ License
 
 #include "../core-computation.hpp"
 
-namespace space {
+namespace hub {
 
     /*---------------------------------------------------------------------------*\
           Class Chain Declaration
@@ -73,7 +73,7 @@ namespace space {
          * @tparam IdxArray Type of the index array.
          * @param[in] pos Input position in Cartesian coordinates.
          * @param[out] index Output index array.
-         * @note The memory space of the index need to be allocated in advance. The size of pos and index need to be the
+         * @note The memory hub of the index need to be allocated in advance. The size of pos and index need to be the
          * same.
          */
         template <typename VectorArray, typename IdxArray>
@@ -89,7 +89,7 @@ namespace space {
          * @param[in] new_idx New chain index array.
          */
         template <typename VectorArray, typename IdxArray>
-        static void update_chain(VectorArray &chain, VectorArray &cartesian, IdxArray const &idx,
+        static void update_chain(VectorArray &chain, VectorArray const &cartesian, IdxArray const &idx,
                                  IdxArray const &new_idx);
 
         /**
@@ -102,7 +102,7 @@ namespace space {
          * @param[in] chain The chain coordinates.
          * @param[out] cartesian The Cartesian coordinates.
          * @param[in] index The chain index array.
-         * @note The memory space of the cartesian need to be allocated in advance. The size of the input parameters
+         * @note The memory hub of the cartesian need to be allocated in advance. The size of the input parameters
          * need to be the same.
          */
         template <typename ScalarArray, typename VectorArray, typename IdxArray>
@@ -128,7 +128,7 @@ namespace space {
          * mapping, otherwise, a centre of mass movement will be performed after the transformation from chain
          * coordinates to Cartesian coordinates.
          */
-        static constexpr bool bijective_transfer{false};
+        static constexpr bool bijective_transfer{true};
 
        private:
         template <typename T>
@@ -154,7 +154,10 @@ namespace space {
 
         template <typename Array, typename IdxArray>
         static void to_cartesian(Array const &chain, Array &cartesian, IdxArray const &index);
+
+        CREATE_MEMBER_CHECK(err);
     };
+
     /*---------------------------------------------------------------------------*\
           Class Chain Implementation
     \*---------------------------------------------------------------------------*/
@@ -167,8 +170,11 @@ namespace space {
     }
 
     template <typename VectorArray, typename IdxArray>
-    void Chain::update_chain(VectorArray &chain, VectorArray &cartesian, const IdxArray &idx, const IdxArray &new_idx) {
+    void Chain::update_chain(VectorArray &chain, VectorArray const &cartesian, const IdxArray &idx,
+                             const IdxArray &new_idx) {
         using Vector = typename VectorArray::value_type;
+        // using Scalar = typename Vector::value_type;
+
         size_t size = chain.size();
 
         VectorArray new_chain;
@@ -185,8 +191,6 @@ namespace space {
         if constexpr (!bijective_transfer) {
             new_chain.emplace_back(Vector(0, 0, 0));
         } else {
-            // Vector new_head = get_new_node(chain, 0, get_idx(new_idx[0]));
-            // new_chain.emplace_back(chain.back() + new_head);
             new_chain.emplace_back(cartesian[new_idx[0]]);
         }
 
@@ -243,8 +247,8 @@ namespace space {
         vec.reserve(num * (num - 1));
         for (size_t i = 0; i < num; ++i) {
             for (size_t j = i + 1; j < num; ++j) {
-                auto dr = (pos[j] - pos[i]);
-                auto r2 = dr.x * dr.x + dr.y * dr.y + dr.z * dr.z;
+                decltype(pos[j]) dr = (pos[j] - pos[i]);
+                decltype(dr.x) r2 = dr.x * dr.x + dr.y * dr.y + dr.z * dr.z;
                 vec.emplace_back(Node{r2, i, j, true});
             }
         }
@@ -283,35 +287,53 @@ namespace space {
     template <typename VectorArray>
     auto Chain::get_new_node(VectorArray const &chain, size_t head, size_t tail) -> typename VectorArray::value_type {
         using Vector = typename VectorArray::value_type;
-        using Scalar = typename Vector::value_type;
+        // using Scalar = typename Vector::value_type;
 
-        Scalar sign{1};
+        bool sign{true};
 
         if (head > tail) {
             std::swap(head, tail);
-            sign = -1;
+            sign = false;
         }
 
-        auto connect = [](auto const &array, auto first, auto last) -> auto {
-            auto new_d = array[first];
-            for (size_t j = first + 1; j < last; ++j) {
-                new_d += array[j];
-            }
+        auto connect = [](auto const &array, auto first, auto last, bool sign) -> auto {
+            if (sign) {
+                Vector new_d = array[first];
+                if constexpr (HAS_MEMBER(typename Vector::value_type, err)) {
+                    new_d.x.err = new_d.y.err = new_d.z.err = 0;
+                }
+                for (size_t j = first + 1; j < last; ++j) {
+                    new_d = new_d + array[j];
+                    // new_d += array[j];
+                }
+                return new_d;
+            } else {
+                Vector new_d = -array[first];
+                if constexpr (HAS_MEMBER(typename Vector::value_type, err)) {
+                    new_d.x.err = new_d.y.err = new_d.z.err = 0;
+                }
 
-            return new_d;
+                for (size_t j = first + 1; j < last; ++j) {
+                    new_d = new_d - array[j];
+                    // new_d -= array[j];
+                }
+                return new_d;
+            }
         };
 
-        return connect(chain, head, tail) * sign;
+        return connect(chain, head, tail, sign);
     }
 
     template <typename Array, typename IdxArray>
     void Chain::to_chain(const Array &cartesian, Array &chain, const IdxArray &index) {
+        using T = typename Array::value_type;
         const size_t size = cartesian.size();
         if constexpr (!bijective_transfer) {
-            chain[size - 1] = 0;
+            chain[size - 1] = T{0.0};
         } else {
             chain[size - 1] = cartesian[index[0]];
         }
+#pragma GCC ivdep
         for (size_t i = 0; i < size - 1; ++i) {
             chain[i] = cartesian[index[i + 1]] - cartesian[index[i]];
         }
@@ -319,9 +341,10 @@ namespace space {
 
     template <typename Array, typename IdxArray>
     void Chain::to_cartesian(const Array &chain, Array &cartesian, const IdxArray &index) {
+        using T = typename Array::value_type;
         const size_t size = cartesian.size();
         if constexpr (!bijective_transfer) {
-            cartesian[index[0]] = 0;
+            cartesian[index[0]] = T{0.0};
         } else {
             cartesian[index[0]] = chain[size - 1];
         }
@@ -329,4 +352,4 @@ namespace space {
             cartesian[index[i]] = cartesian[index[i - 1]] + chain[i - 1];
         }
     }
-}  // namespace space
+}  // namespace hub

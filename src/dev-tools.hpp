@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -30,7 +30,7 @@ License
 
 #include "IO.hpp"
 
-namespace space {
+namespace hub {
 
     template <typename STL, typename... Args>
     void emplace_back(STL &container, Args &&...args) {
@@ -62,17 +62,24 @@ namespace space {
         (..., (args.shrink_to_fit()));
     }
 
-    template <typename... Args>
+#define spacehub_abort(...)                                                                            \
+    do {                                                                                               \
+        hub::print(std::cout, __FILE__, ": Line :", __LINE__, " within \"", __FUNCTION__, "\"\r\n"); \
+        hub::print(std::cout, __VA_ARGS__);                                                          \
+        exit(0);                                                                                       \
+    } while (0)
+
+    /*template <typename... Args>
     [[noreturn]] void spacehub_abort(Args &&...args) {
-        space::print(std::cout, __FILE__, ": Line :", __LINE__, "\r\n");
-        space::print(std::cout, std::forward<Args>(args)...);
+        hub::print(std::cout, __FILE__, ": Line :", __LINE__, "\r\n");
+        hub::print(std::cout, std::forward<Args>(args)...);
         exit(0);
-    }
+    }*/
 
     class Empty {};
 
     template <typename T>
-    struct get_value_type {
+    struct raw_type {
        private:
         /*If U has member::value_type, getValueType<T>(0) will match this function. See details on SFINAE. */
         template <typename U>
@@ -85,6 +92,9 @@ namespace space {
        public:
         using type = decltype(check<T>(0));
     };
+
+    template <typename T>
+    using raw_type_t = typename raw_type<T>::type;
 
 #define MACRO_CAT(A, B) MACRO_CAT_I(A, B)
 #define MACRO_CAT_I(A, B) MACRO_CAT_II(~, A##B)
@@ -99,9 +109,9 @@ namespace space {
 #define DEBUG_MODE(BLOCK)
 #endif
 
-/** @brief Macros used to output debuf info.  */
+/** @brief Macros used to output debug info.  */
 #ifdef DEBUG
-#define DEBUG_MSG(EXPR, ...) (EXPR ? space::print(std::cout, __VA_ARGS__) : void(0))
+#define DEBUG_MSG(EXPR, ...) (EXPR ? hub::print(std::cout, __VA_ARGS__) : void(0))
 #else
 #define DEBUG_MSG(EXPR, ...)
 #endif
@@ -117,7 +127,7 @@ namespace space {
         using Type = std::remove_reference_v<decltype(CONTAINER)>;                             \
         Type result;                                                                           \
         if constexpr (is_reservable<Type>::value) {                                            \
-            result.reserve(CONTAINER.size())                                                   \
+            result.reserve((CONTAINER).size())                                                 \
         }                                                                                      \
         std::transform(std::begin(CONTAINER), std::end(CONTAINER), std::back_inserter(result), \
                        [](auto &X) { return EXPR; });                                          \
@@ -136,17 +146,21 @@ namespace space {
     /** Default move assignment operator */                                  \
     CLASS &operator=(CLASS &&) = ATTR5;
 
-#define SPACEHUB_USING_TYPE_SYSTEM_OF(CLASS)                      \
-    using TypeSet = typename CLASS::TypeSet;                      \
-    template <typename... _T_>                                    \
-    using Container = typename CLASS::template Container<_T_...>; \
-                                                                  \
-    using Scalar = typename CLASS::Scalar;                        \
-    using ScalarArray = typename CLASS::ScalarArray;              \
-    using IdxArray = typename CLASS::IdxArray;                    \
-    using IntArray = typename CLASS::IntArray;                    \
-    using Vector = typename CLASS::Vector;                        \
-    using VectorArray = typename CLASS::VectorArray;
+#define SPACEHUB_USING_TYPE_SYSTEM_OF(CLASS)                   \
+    using TypeSet = typename CLASS::TypeSet;                   \
+    template <typename _T_>                                    \
+    using Container = typename CLASS::template Container<_T_>; \
+                                                               \
+    using Scalar = typename CLASS::Scalar;                     \
+    using ScalarArray = typename CLASS::ScalarArray;           \
+    using IdxArray = typename CLASS::IdxArray;                 \
+    using IntArray = typename CLASS::IntArray;                 \
+    using Vector = typename CLASS::Vector;                     \
+    using VectorArray = typename CLASS::VectorArray;           \
+    using StateScalar = typename CLASS::StateScalar;           \
+    using StateScalarArray = typename CLASS::StateScalarArray; \
+    using StateVector = typename CLASS::StateVector;           \
+    using StateVectorArray = typename CLASS::StateVectorArray
 
 #define SPACEHUB_STD_ACCESSOR(TYPE, NAME, MEMBER)                    \
     /** The setter interface of member `MEMBER` in name of `NAME`.*/ \
@@ -301,7 +315,7 @@ namespace space {
 #define CHECK_TYPE(T1, T2)                                                     \
     static_assert(std::is_same<typename T1::Types, typename T2::Types>::value, \
                   "Template argument '" #T1 "' and '" #T2                      \
-                  "' must have the same type of the type member(space::ProtoType<...>)");
+                  "' must have the same type of the type member(hub::ProtoType<...>)");
 
 #define CHECK_POD(DATA) static_assert(std::is_trivial<DATA>::value, "Template arg '" #DATA "' must be a POD type!");
 
@@ -351,4 +365,4 @@ namespace space {
     }                                                                                                          \
     void operator delete(void *ptr) { ::operator delete(*(reinterpret_cast<void **>(ptr) - 1)); }
 
-}  // namespace space
+}  // namespace hub

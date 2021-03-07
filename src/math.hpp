@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -28,11 +28,39 @@ License
 
 #include "dev-tools.hpp"
 
+#ifdef CRLIBM
+#define SIN sin_rn
+#define COS cos_rn
+#define TAN tan_rn
+#define ASIN asin_rn
+#define ACOS acos_rn
+#define ATAN atan_rn
+#define SINH sinh_rn
+#define COSH cosh_rn
+#define LOG log_rn
+#define LOG10 log10_rn
+#define POW pow_rn
+#define EXP exp_rn
+#else
+#define SIN sin
+#define COS cos
+#define TAN tan
+#define ASIN asin
+#define ACOS acos
+#define ATAN atan
+#define SINH sinh
+#define COSH cosh
+#define LOG log
+#define LOG10 log10
+#define POW pow
+#define EXP exp
+#endif
+
 /**
- * @namespace space::math
+ * @namespace hub::math
  * namespace for math
  */
-namespace space::math {
+namespace hub::math {
     /**
      * @brief SpaceHub min
      *
@@ -118,7 +146,7 @@ namespace space::math {
 
     template <typename Dtype>
     struct epsilon {
-        using value_type = typename space::get_value_type<Dtype>::type;
+        using value_type = typename hub::raw_type<Dtype>::type;
         constexpr static value_type value = std::numeric_limits<value_type>::epsilon();
     };
 
@@ -146,7 +174,7 @@ namespace space::math {
 
     template <typename Dtype>
     struct max_value {
-        using value_type = typename space::get_value_type<Dtype>::type;
+        using value_type = typename hub::raw_type<Dtype>::type;
         constexpr static value_type value = std::numeric_limits<value_type>::max();
     };
 
@@ -160,12 +188,12 @@ namespace space::math {
 
     template <typename Dtype>
     struct big_value {
-        using value_type = typename space::get_value_type<Dtype>::type;
+        using value_type = typename hub::raw_type<Dtype>::type;
         constexpr static value_type value = 0.01 * std::numeric_limits<value_type>::max();
     };
 
     /**
-     * @brief A big value of a specifi type.
+     * @brief A big value of a specific type.
      *
      * 0.1 max_value_v
      *
@@ -179,13 +207,13 @@ namespace space::math {
         return 1 / sqrt(x);
     }
 
-    template <>
+    /*template <>
     inline float karmack_sqrt_inv<float>(float x) {
         float xhalf = 0.5f * x;
-        int i = *(int *)&x;
+        int i = *(int *)(&x);
         // i = 0x5f3759df - (i >> 1);
         i = 0x5f375a86 - (i >> 1);
-        x = *(float *)&i;
+        x = *(float *)(&i);
         x = x * (1.5f - xhalf * x * x);
         // x = x*(1.5f - xhalf*x*x);
         return x;
@@ -194,18 +222,18 @@ namespace space::math {
     template <>
     inline double karmack_sqrt_inv<double>(double x) {
         double xhalf = 0.5f * x;
-        long long i = *(long long *)&x;
+        long long i = *(long long *)(&x);
         i = 0x5fe6eb50c7aa19f9 - (i >> 1);
-        x = *(double *)&i;
+        x = *(double *)(&i);
         x = x * (1.5f - xhalf * x * x);
         // x = x*(1.5f - xhalf*x*x);
         return x;
-    }
+    }*/
 
     /**
      * @brief find root use bisection method
      *
-     * @tparam Fun Type of Callable ojbect.
+     * @tparam Fun Type of Callable object.
      * @param f Callable object
      * @param low Lower limit of root range
      * @param high Upper limit of root range
@@ -248,4 +276,4 @@ namespace space::math {
         }
         return x;
     }
-}  // namespace space::math
+}  // namespace hub::math

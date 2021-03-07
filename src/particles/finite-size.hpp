@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -27,7 +27,7 @@ License
 #include "../IO.hpp"
 #include "point-particles.hpp"
 
-namespace space::particle_set {
+namespace hub::particles {
 
     template <typename Vec3>
     struct SizeParticle : public PointParticle<Vec3> {
@@ -71,15 +71,15 @@ namespace space::particle_set {
          */
         SizeParticle(Scalar m, Scalar r, Scalar px = 0, Scalar py = 0, Scalar pz = 0, Scalar vx = 0, Scalar vy = 0,
                      Scalar vz = 0)
-            : PointParticle<Vector>{m, px, py, pz, vx, vy, vz}, radius{r} {}
+                : PointParticle<Vector>{m, px, py, pz, vx, vy, vz}, radius{r} {}
 
         friend std::ostream &operator<<(std::ostream &os, SizeParticle const &particle) {
-            space::print_csv(os, particle.mass, particle.radius, particle.pos, particle.vel);
+            hub::print_csv(os, particle.mass, particle.radius, particle.pos, particle.vel);
             return os;
         }
 
         friend std::istream &operator>>(std::istream &is, SizeParticle &particle) {
-            space::input(is, particle.mass, particle.radius, particle.pos, particle.vel);
+            hub::input(is, particle.mass, particle.radius, particle.pos, particle.vel);
             return is;
         }
 
@@ -96,7 +96,7 @@ namespace space::particle_set {
     /**
      * @brief Finite size particle.
      *
-     * @tparam TypeSystem The type system in spaceHub(space::Types).
+     * @tparam TypeSystem The type system in spaceHub(hub::Types).
      */
     template <typename TypeSystem>
     class SizeParticles {
@@ -133,11 +133,11 @@ namespace space::particle_set {
 
         SPACEHUB_ARRAY_ACCESSOR(IdxArray, idn, idn_);
 
-        SPACEHUB_STD_ACCESSOR(Scalar, time, time_);
+        SPACEHUB_STD_ACCESSOR(StateScalar, time, time_);
 
-        SPACEHUB_ARRAY_ACCESSOR(VectorArray, pos, pos_);
+        SPACEHUB_ARRAY_ACCESSOR(StateVectorArray, pos, pos_);
 
-        SPACEHUB_ARRAY_ACCESSOR(VectorArray, vel, vel_);
+        SPACEHUB_ARRAY_ACCESSOR(StateVectorArray, vel, vel_);
 
         void resize(size_t new_sz);
 
@@ -145,13 +145,13 @@ namespace space::particle_set {
 
         void emplace_back(Particle const &new_particle);
 
-        [[nodiscard]] size_t number() const;
+           size_t number() const;
 
-        [[nodiscard]] size_t capacity() const;
+           size_t capacity() const;
 
         void clear();
 
-        std::string column_names() const;
+          std::string column_names() const;
 
         template <typename U>
         friend std::ostream &operator<<(std::ostream &os, SizeParticles<U> const &ps);
@@ -161,9 +161,9 @@ namespace space::particle_set {
 
        private:
         // Private members
-        VectorArray pos_;
+        StateVectorArray pos_;
 
-        VectorArray vel_;
+        StateVectorArray vel_;
 
         ScalarArray mass_;
 
@@ -171,13 +171,13 @@ namespace space::particle_set {
 
         IdxArray idn_;
 
-        Scalar time_{0};
+        StateScalar time_{0};
 
         size_t active_num_{0};
     };
-}  // namespace space::particle_set
+}  // namespace hub::particles
 
-namespace space::particle_set {
+namespace hub::particles {
     /*---------------------------------------------------------------------------*\
         Class SizeParticles Implementation
     \*---------------------------------------------------------------------------*/
@@ -210,18 +210,18 @@ namespace space::particle_set {
 
     template <typename TypeSystem>
     void SizeParticles<TypeSystem>::reserve(size_t new_cap) {
-        space::reserve_all(new_cap, pos_, vel_, mass_, radius_, idn_);
+        hub::reserve_all(new_cap, pos_, vel_, mass_, radius_, idn_);
     }
 
     template <typename TypeSystem>
     void SizeParticles<TypeSystem>::clear() {
-        space::clear_all(pos_, vel_, mass_, radius_, idn_);
+        hub::clear_all(pos_, vel_, mass_, radius_, idn_);
         active_num_ = 0;
     }
 
     template <typename TypeSystem>
     void SizeParticles<TypeSystem>::resize(size_t new_sz) {
-        space::resize_all(new_sz, pos_, vel_, mass_, radius_, idn_);
+        hub::resize_all(new_sz, pos_, vel_, mass_, radius_, idn_);
         active_num_ = new_sz;
     }
 
@@ -244,9 +244,9 @@ namespace space::particle_set {
     std::ostream &operator<<(std::ostream &os, SizeParticles<TypeSystem> const &ps) {
         size_t num = ps.number();
         for (size_t i = 0; i < num; ++i) {
-            space::print(os, ps.time(), ',', ps.idn(i), ',', ps.mass(i), ',', ps.radius(i), ',', ps.pos(i), ',',
-                         ps.vel(i), '\n');
+            hub::print(os, ps.time(), ',', ps.idn(i), ',', ps.mass(i), ',', ps.radius(i), ',', ps.pos(i), ',',
+                       ps.vel(i), '\n');
         }
         return os;
     }
-}  // namespace space::particle_set
+}  // namespace hub::particles

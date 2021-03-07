@@ -4,7 +4,7 @@
 
 #include "../dev-tools.hpp"
 
-namespace SpaceH::Lazy {
+namespace hub::lazy {
 
 #define IS_EXPR(TYPE) IS_BASE_OF(Expr<TYPE>, TYPE)
 
@@ -14,12 +14,12 @@ namespace SpaceH::Lazy {
     };
 
     template <bool IsExpr, typename T, typename... Args>
-    inline const auto eval_at(std::enable_if_t<IsExpr, T> const &expr, Args &&... args) {
+    inline const auto eval_at(std::enable_if_t<IsExpr, T> const &expr, Args &&...args) {
         return expr.eval(std::forward<Args>(args)...);
     }
 
     template <bool IsExpr, typename T, typename... Args>
-    inline const auto eval_at(std::enable_if_t<!IsExpr, T> const &expr, Args &&... args) {
+    inline const auto eval_at(std::enable_if_t<!IsExpr, T> const &expr, Args &&...args) {
         return expr;
     }
 
@@ -33,7 +33,7 @@ namespace SpaceH::Lazy {
         Unary_Expr(const Operator &opt, const Unary &unary) : opt_(opt), unary_(unary) {}
 
         template <typename... Args>
-        inline auto eval(Args &&... args) const {
+        inline auto eval(Args &&...args) const {
             return opt_(eval_at<IS_EXPR(Unary), Unary, Args...>(unary_, std::forward<Args>(args)...));
         }
     };
@@ -49,14 +49,14 @@ namespace SpaceH::Lazy {
         Binary_Expr(const Operator &opt, const Lhs &lhs, const Rhs &rhs) : opt_(opt), lhs_(lhs), rhs_(rhs) {}
 
         template <typename... Args>
-        inline auto eval(Args &&... args) const {
+        inline auto eval(Args &&...args) const {
             return opt_(eval_at<IS_EXPR(Lhs), Lhs, Args...>(lhs_, std::forward<Args>(args)...),
                         eval_at<IS_EXPR(Rhs), Rhs, Args...>(rhs_, std::forward<Args>(args)...));
         }
     };
 
 #define EXPR_CREATE_UNARY_OPERATION(FUNC, EXPR)                                             \
-    auto UNIQ(OP) = [](const auto &unary) -> decltype(EXPR) { return (EXPR); };             \
+    inline auto UNIQ(OP) = [](const auto &unary) -> decltype(EXPR) { return (EXPR); };      \
                                                                                             \
     template <typename Unary>                                                               \
     inline constexpr Unary_Expr<decltype(UNIQ(OP)), Unary> FUNC(const Expr<Unary> &unary) { \
@@ -66,7 +66,7 @@ namespace SpaceH::Lazy {
 #define EXPR_FILTER(TYPE, ...) typename std::enable_if_t<!IS_EXPR(TYPE), ##__VA_ARGS__>
 
 #define EXPR_CREATE_BINARY_OPERATION(FUNC, EXPR)                                                                  \
-    auto UNIQ(OP) = [](const auto &lhs, const auto &rhs) -> decltype(EXPR) { return (EXPR); };                    \
+    inline auto UNIQ(OP) = [](const auto &lhs, const auto &rhs) -> decltype(EXPR) { return (EXPR); };             \
                                                                                                                   \
     template <typename Lhs, typename Rhs>                                                                         \
     inline constexpr EXPR_FILTER(Lhs, Binary_Expr<decltype(UNIQ(OP)), Lhs, Rhs>)                                  \
@@ -87,26 +87,26 @@ namespace SpaceH::Lazy {
 
     EXPR_CREATE_BINARY_OPERATION(operator+, lhs + rhs);
     EXPR_CREATE_BINARY_OPERATION(operator-, lhs - rhs);
-    EXPR_CREATE_BINARY_OPERATION(operator*, lhs * rhs);
+    EXPR_CREATE_BINARY_OPERATION(operator*, lhs *rhs);
     EXPR_CREATE_BINARY_OPERATION(operator/, lhs / rhs);
     EXPR_CREATE_BINARY_OPERATION(operator%, lhs % rhs);
     EXPR_CREATE_BINARY_OPERATION(operator==, lhs == rhs);
     EXPR_CREATE_BINARY_OPERATION(operator!=, lhs != rhs);
-    EXPR_CREATE_BINARY_OPERATION(operator<, lhs<rhs);
-    EXPR_CREATE_BINARY_OPERATION(operator>, lhs> rhs);
+    EXPR_CREATE_BINARY_OPERATION(operator<, lhs < rhs);
+    EXPR_CREATE_BINARY_OPERATION(operator>, lhs > rhs);
     EXPR_CREATE_BINARY_OPERATION(operator<=, lhs <= rhs);
     EXPR_CREATE_BINARY_OPERATION(operator>=, lhs >= rhs);
-    EXPR_CREATE_BINARY_OPERATION(operator&&, lhs && rhs);
+    EXPR_CREATE_BINARY_OPERATION(operator&&, lhs &&rhs);
     EXPR_CREATE_BINARY_OPERATION(operator||, lhs || rhs);
-    EXPR_CREATE_BINARY_OPERATION(operator&, lhs & rhs);
+    EXPR_CREATE_BINARY_OPERATION(operator&, lhs &rhs);
     EXPR_CREATE_BINARY_OPERATION(operator^, lhs ^ rhs);
     EXPR_CREATE_BINARY_OPERATION(operator|, lhs | rhs);
     EXPR_CREATE_BINARY_OPERATION(pow, pow(lhs, rhs));
     EXPR_CREATE_BINARY_OPERATION(exp, exp(lhs, rhs));
 
     EXPR_CREATE_UNARY_OPERATION(operator+, unary);
-    EXPR_CREATE_UNARY_OPERATION(operator-, - unary);
-    EXPR_CREATE_UNARY_OPERATION(operator*, * unary);
+    EXPR_CREATE_UNARY_OPERATION(operator-, -unary);
+    EXPR_CREATE_UNARY_OPERATION(operator*, *unary);
     EXPR_CREATE_UNARY_OPERATION(operator!, !unary);
     EXPR_CREATE_UNARY_OPERATION(operator~, ~unary);
     EXPR_CREATE_UNARY_OPERATION(abs, unary > 0 ? unary : -unary);
@@ -121,4 +121,4 @@ namespace SpaceH::Lazy {
     EXPR_CREATE_UNARY_OPERATION(sinh, sinh(unary));
     EXPR_CREATE_UNARY_OPERATION(cosh, cosh(unary));
     EXPR_CREATE_UNARY_OPERATION(tanh, tanh(unary));
-}  // namespace SpaceH::Lazy
+}  // namespace hub::lazy

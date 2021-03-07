@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -29,8 +29,8 @@ License
 #include "../core-computation.hpp"
 #include "../interaction/interaction.hpp"
 #include "../spacehub-concepts.hpp"
-
-namespace space::particle_system {
+#include "../type-class.hpp"
+namespace hub::system {
 
     /*---------------------------------------------------------------------------*\
         Class SimpleSystem Declaration
@@ -49,8 +49,17 @@ namespace space::particle_system {
 
         using Interaction = Interactions;
 
+        // static public members
+        static constexpr bool ext_vel_dep{Interactions::ext_vel_dep};
+
+        static constexpr bool ext_vel_indep{Interactions::ext_vel_indep};
+
         // Constructors
         SPACEHUB_MAKE_CONSTRUCTORS(SimpleSystem, delete, default, default, default, default);
+
+        SPACEHUB_ARRAY_ACCESSOR(StateScalarArray, increment, increment_);
+
+        Scalar step_scale() const { return 1.0; };
 
         /**
          *
@@ -62,28 +71,6 @@ namespace space::particle_system {
         SimpleSystem(Scalar time, STL const &particle_set);
 
         // Public methods
-
-        /**
-         * @param dt
-         */
-        void advance_time(Scalar dt);
-
-        /**
-         *
-         * @param velocity
-         * @param step_size
-         */
-        template <typename GenVectorArray>
-        void advance_pos(Scalar step_size, GenVectorArray const &velocity);
-
-        /**
-         *
-         * @param acceleration
-         * @param step_size
-         */
-        template <typename GenVectorArray>
-        void advance_vel(Scalar step_size, GenVectorArray const &acceleration);
-
         /**
          *
          * @param acceleration
@@ -111,31 +98,39 @@ namespace space::particle_system {
         void post_iter_process(){};
 
         /**
+         * @brief
          *
-         * @tparam STL
-         * @param stl_ranges
+         * @tparam ScalarIterable
+         * @param y
          */
-        template <typename STL>
-        void write_to_scalar_array(STL &stl_ranges);
-
-        /**
-         *
-         * @tparam STL
-         * @param stl_ranges
-         */
-        template <typename STL>
-        void read_from_scalar_array(STL const &stl_ranges);
+        template <typename ScalarIterable>
+        void write_to_scalar_array(ScalarIterable &y);
 
         /**
          * @brief
          *
-         * @tparam STL
-         * @param stl_ranges
+         * @tparam ScalarIterable
+         * @param y
          */
-        template <typename STL>
-        void evaluate_general_derivative(STL &stl_ranges);
+        template <typename ScalarIterable>
+        void read_from_scalar_array(ScalarIterable const &y);
+
+        template <typename ScalarIterable>
+        void evaluate_general_derivative(ScalarIterable &dy_dh);
+
+        inline void collect_increment(bool sync) { sync_increment_ = sync; };
+
+        void clear_increment() { calc::array_set_zero(increment_); };
 
         size_t variable_number() const;
+
+        inline constexpr size_t time_offset() const { return 0; };
+
+        inline constexpr size_t pos_offset() const { return 1; };
+
+        inline constexpr size_t vel_offset() const { return this->number() * 3 + 1; };
+
+        inline constexpr size_t auxi_vel_offset() const { return this->number() * 6 + 1; };
 
         // Friend functions
         template <CONCEPT_PARTICLES P, CONCEPT_INTERACTION F>
@@ -163,71 +158,90 @@ namespace space::particle_system {
          */
         void kick_real_vel(Scalar step_size);
 
+        template <typename Array>
+        void sync_pos_increment(Array const &inc, Scalar step_size);
+
+        template <typename Array>
+        void sync_vel_increment(Array const &inc, Scalar step_size);
+
+        template <typename Array>
+        void sync_auxi_vel_increment(Array const &inc, Scalar step_size);
+
+        void sync_time_increment(Scalar phy_time);
+
         // Private members
-        // Particles ptcl_;
 
-        interactions::InteractionData<Interactions, VectorArray> accels_;
+        force::InteractionData<Interactions, VectorArray> accels_;
 
-        std::conditional_t<Interactions::ext_vel_dep, VectorArray, Empty> aux_vel_;
+        StateScalarArray increment_;
+
+        std::conditional_t<Interactions::ext_vel_dep, StateVectorArray, Empty> aux_vel_;
+
+        bool sync_increment_{false};
     };
-}  // namespace space::particle_system
+}  // namespace hub::system
 
-namespace space::particle_system {
+namespace hub::system {
     /*---------------------------------------------------------------------------*\
         Class SimpleSystem Implementation
     \*---------------------------------------------------------------------------*/
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
     template <CONCEPT_PARTICLE_CONTAINER STL>
     SimpleSystem<Particles, Interactions>::SimpleSystem(Scalar time, const STL &particle_set)
-        : Particles(time, particle_set), accels_(particle_set.size()) {
+        : Particles(time, particle_set), accels_(particle_set.size()), increment_(this->variable_number()) {
         if constexpr (Interactions::ext_vel_dep) {
             aux_vel_ = this->vel();
         }
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    template <typename STL>
-    void SimpleSystem<Particles, Interactions>::read_from_scalar_array(const STL &stl_ranges) {
-        auto begin = stl_ranges.begin();
-        this->time() = *begin;
-        size_t len = this->number() * 3;
-        auto pos_begin = begin + 1;
-        auto pos_end = pos_begin + len;
-        auto vel_begin = pos_end;
-        auto vel_end = vel_begin + len;
-        load_to_coords(pos_begin, pos_end, this->pos());
-        load_to_coords(vel_begin, vel_end, this->vel());
-        if constexpr (Interactions::ext_vel_dep) {
-            auto aux_vel_begin = vel_end;
-            auto aux_vel_end = aux_vel_begin + len;
-            load_to_coords(aux_vel_begin, aux_vel_end, aux_vel_);
+    template <typename ScalarIterable>
+    void SimpleSystem<Particles, Interactions>::read_from_scalar_array(const ScalarIterable &y) {
+        if (y.size() == this->variable_number()) {
+            auto begin = y.begin();
+            this->time() = *(begin + time_offset());
+
+            auto pos_begin = begin + pos_offset();
+            auto pos_end = begin + vel_offset();
+            auto vel_begin = begin + vel_offset();
+            auto vel_end = begin + auxi_vel_offset();
+
+            load_to_coords(pos_begin, pos_end, this->pos());
+            load_to_coords(vel_begin, vel_end, this->vel());
+            if constexpr (Interactions::ext_vel_dep) {
+                auto aux_vel_begin = begin + auxi_vel_offset();
+                auto aux_vel_end = y.end();
+                load_to_coords(aux_vel_begin, aux_vel_end, aux_vel_);
+            }
+        } else {
+            spacehub_abort("Wrong input array size!");
         }
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    template <typename STL>
-    void SimpleSystem<Particles, Interactions>::write_to_scalar_array(STL &stl_ranges) {
-        stl_ranges.clear();
-        stl_ranges.reserve(this->number() * 3 * (2 + static_cast<size_t>(Interactions::ext_vel_dep)) + 1);
-        stl_ranges.emplace_back(this->time());
-        add_coords_to(stl_ranges, this->pos());
-        add_coords_to(stl_ranges, this->vel());
+    template <typename ScalarIterable>
+    void SimpleSystem<Particles, Interactions>::write_to_scalar_array(ScalarIterable &y) {
+        y.clear();
+        y.reserve(this->variable_number());
+        y.emplace_back(this->time());
+        add_coords_to(y, this->pos());
+        add_coords_to(y, this->vel());
         if constexpr (Interactions::ext_vel_dep) {
-            add_coords_to(stl_ranges, aux_vel_);
+            add_coords_to(y, aux_vel_);
         }
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    template <typename STL>
-    void SimpleSystem<Particles, Interactions>::evaluate_general_derivative(STL &stl_ranges) {
-        stl_ranges.clear();
-        stl_ranges.reserve(this->number() * 3 * (2 + static_cast<size_t>(Interactions::ext_vel_dep)) + 1);
-        stl_ranges.emplace_back(1);              // dt/dh
-        add_coords_to(stl_ranges, this->vel());  // dp/dt
+    template <typename ScalarIterable>
+    void SimpleSystem<Particles, Interactions>::evaluate_general_derivative(ScalarIterable &dy_dh) {
+        dy_dh.clear();
+        dy_dh.reserve(this->variable_number());
+        dy_dh.emplace_back(1);              // dt/dh
+        add_coords_to(dy_dh, this->vel());  // dp/dh
         Interactions::eval_acc(*this, this->accels_.acc());
-        add_coords_to(stl_ranges, this->accels_.acc());  // dv/dt
+        add_coords_to(dy_dh, this->accels_.acc());  // dv/dh
         if constexpr (Interactions::ext_vel_dep) {
-            add_coords_to(stl_ranges, this->accels_.acc());  // dw/dt
+            add_coords_to(dy_dh, this->accels_.acc());  // dw/dh
         }
     }
 
@@ -247,13 +261,16 @@ namespace space::particle_system {
     void SimpleSystem<Particles, Interactions>::kick(Scalar step_size) {
         if constexpr (Interactions::ext_vel_dep) {
             Scalar half_step = 0.5 * step_size;
+
             eval_vel_indep_acc();
+
             kick_real_vel(half_step);
             kick_pseu_vel(step_size);
             kick_real_vel(half_step);
         } else {
             Interactions::eval_acc(*this, accels_.acc());
             calc::array_advance(this->vel(), accels_.acc(), step_size);
+            sync_vel_increment(accels_.acc(), step_size);
         }
     }
 
@@ -261,6 +278,8 @@ namespace space::particle_system {
     void SimpleSystem<Particles, Interactions>::drift(Scalar step_size) {
         this->time() += step_size;
         calc::array_advance(this->pos(), this->vel(), step_size);
+        sync_time_increment(step_size);
+        sync_pos_increment(this->vel(), step_size);
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
@@ -270,29 +289,13 @@ namespace space::particle_system {
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    template <typename GenVectorArray>
-    void SimpleSystem<Particles, Interactions>::advance_vel(Scalar step_size, GenVectorArray const &acceleration) {
-        calc::array_advance(this->vel(), acceleration, step_size);
-    }
-
-    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    template <typename GenVectorArray>
-    void SimpleSystem<Particles, Interactions>::advance_pos(Scalar step_size, GenVectorArray const &velocity) {
-        calc::array_advance(this->pos(), velocity, step_size);
-    }
-
-    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
-    void SimpleSystem<Particles, Interactions>::advance_time(Scalar dt) {
-        this->time() += dt;
-    }
-
-    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
     void SimpleSystem<Particles, Interactions>::kick_real_vel(Scalar step_size) {
         std::swap(aux_vel_, this->vel());
         Interactions::eval_extra_vel_dep_acc(*this, accels_.ext_vel_dep_acc());
         std::swap(aux_vel_, this->vel());
         calc::array_add(accels_.acc(), accels_.tot_vel_indep_acc(), accels_.ext_vel_dep_acc());
         calc::array_advance(this->vel(), accels_.acc(), step_size);
+        sync_vel_increment(accels_.acc(), step_size);
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
@@ -300,6 +303,7 @@ namespace space::particle_system {
         Interactions::eval_extra_vel_dep_acc(*this, accels_.ext_vel_dep_acc());
         calc::array_add(accels_.acc(), accels_.tot_vel_indep_acc(), accels_.ext_vel_dep_acc());
         calc::array_advance(aux_vel_, accels_.acc(), step_size);
+        sync_auxi_vel_increment(accels_.acc(), step_size);
     }
 
     template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
@@ -308,6 +312,37 @@ namespace space::particle_system {
         if constexpr (Interactions::ext_vel_indep) {
             Interactions::eval_extra_vel_indep_acc(*this, accels_.ext_vel_indep_acc());
             calc::array_add(accels_.tot_vel_indep_acc(), accels_.tot_vel_indep_acc(), accels_.ext_vel_indep_acc());
+        }
+    }
+
+    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
+    template <typename Array>
+    void SimpleSystem<Particles, Interactions>::sync_pos_increment(Array const &inc, Scalar step_size) {
+        if (sync_increment_) {
+            advance_scaled_coords_to(increment_.begin() + pos_offset(), inc, step_size);
+        }
+    }
+
+    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
+    template <typename Array>
+    void SimpleSystem<Particles, Interactions>::sync_vel_increment(Array const &inc, Scalar step_size) {
+        if (sync_increment_) {
+            advance_scaled_coords_to(increment_.begin() + vel_offset(), inc, step_size);
+        }
+    }
+
+    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
+    template <typename Array>
+    void SimpleSystem<Particles, Interactions>::sync_auxi_vel_increment(Array const &inc, Scalar step_size) {
+        if (sync_increment_) {
+            advance_scaled_coords_to(increment_.begin() + auxi_vel_offset(), inc, step_size);
+        }
+    }
+
+    template <CONCEPT_PARTICLES Particles, CONCEPT_INTERACTION Interactions>
+    void SimpleSystem<Particles, Interactions>::sync_time_increment(Scalar phy_time) {
+        if (sync_increment_) {
+            increment_[time_offset()] += phy_time;
         }
     }
 
@@ -322,4 +357,5 @@ namespace space::particle_system {
         is >> static_cast<Particles>(ps);
         return is;
     }
-}  // namespace space::particle_system
+
+}  // namespace hub::system

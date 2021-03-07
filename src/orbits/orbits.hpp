@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -33,11 +33,11 @@ License
 #include "../spacehub-concepts.hpp"
 #include "../vector/vector3.hpp"
 /**
- * @namespace space::orbit
+ * @namespace hub::orbit
  *
  * Documentation
  */
-namespace space::orbit {
+namespace hub::orbit {
 
     /*---------------------------------------------------------------------------*\
          Class OrbitArgs Declaration
@@ -48,7 +48,7 @@ namespace space::orbit {
     enum class OrbitType { Ellipse, Parabola, Hyperbola, None };
 
     /**
-     * @brief A place holder that indicates one of the three angles in orbital parameters will be randomly generaged.
+     * @brief A place holder that indicates one of the three angles in orbital parameters will be randomly generated.
      */
     struct RandomIndicator {
     } isotherm;
@@ -61,9 +61,11 @@ namespace space::orbit {
 #else
 #define CONCEPT_ANGLE typename
 #endif
+
     /**
-     * @brief Orbital parameters of the Kepler orbit.
-     *@tparam Real Floating point like type.
+     * @brief
+     *
+     * @tparam Real
      */
     template <typename Real>
     struct KeplerOrbit {
@@ -76,42 +78,42 @@ namespace space::orbit {
         /**
          *  @brief Mass of the primary object.
          */
-        Scalar m1;
+        Scalar m1{0};
         /**
          * @brief Mass of the secondary object.
          */
-        Scalar m2;
+        Scalar m2{0};
         /**
          * @brief Semi-latus rectum of the orbit  a(1-e^2)  .
          *
          * We don't use semi-major axis for this general orbital type because the semi-major axis for parabolic orbit is
          * undefined.
          */
-        Scalar p;
+        Scalar p{0};
         /**
          *  @brief Eccentricity of the orbit.
          */
-        Scalar e;
+        Scalar e{0};
         /**
          *  @brief Orbit inclination.
          */
-        Scalar i;
+        Scalar i{0};
         /**
          *  @brief Longitude of the ascending node.
          */
-        Scalar Omega;
+        Scalar Omega{0};
         /**
          *  @brief Argument of periapsis.
          */
-        Scalar omega;
+        Scalar omega{0};
         /**
          *  @brief True anomaly.
          */
-        Scalar nu;
+        Scalar nu{0};
         /**
          *  @brief Orbit type.
          */
-        OrbitType orbit_type;
+        OrbitType orbit_type{OrbitType::None};
 
         SPACEHUB_MAKE_CONSTRUCTORS(KeplerOrbit, default, default, default, default, default);
 
@@ -152,14 +154,14 @@ namespace space::orbit {
         inline void shuffle_nu();
 
         /**
-         * @brief Write the orbit to an ouput stream.
+         * @brief Write the orbit to an output stream.
          *
          * @param[out] os Output stream
          * @param[in] obt Orbit parameters.
          * @return std::ostream& Output stream.
          */
         friend std::ostream &operator<<(std::ostream &os, KeplerOrbit const &obt) {
-            space::display(os, obt.m1, obt.m2, obt.p, obt.e, obt.i, obt.Omega, obt.omega, obt.nu);
+            hub::print_csv(os, obt.m1, obt.m2, obt.p, obt.e, obt.i, obt.Omega, obt.omega, obt.nu);
             return os;
         }
     };
@@ -247,7 +249,7 @@ namespace space::orbit {
         /**
          * @brief Semi-major axis.
          */
-        Scalar a{0};
+        Scalar a{1};
     };
 
     /*---------------------------------------------------------------------------*\
@@ -320,16 +322,16 @@ namespace space::orbit {
 
         if (0 <= e && e < 1)
             return math::root_bisection(
-                [=](Scalar x) -> Scalar { return (x - e * sin(x) - M_anomaly) / (1 - e * cos(x)); }, -space::consts::pi,
-                space::consts::pi);
+                    [=](Scalar x) -> Scalar { return (x - e * sin(x) - M_anomaly) / (1 - e * cos(x)); }, -hub::consts::pi,
+                    hub::consts::pi);
         else if (e > 1)
             return math::root_bisection(
-                [=](Scalar x) -> Scalar { return (e * sinh(x) - x - M_anomaly) / (e * cosh(x) - 1); },
-                -space::consts::pi, space::consts::pi);
+                    [=](Scalar x) -> Scalar { return (e * sinh(x) - x - M_anomaly) / (e * cosh(x) - 1); },
+                    -hub::consts::pi, hub::consts::pi);
         else if (fabs(e - 1) < math::epsilon<Scalar>::value)
             return math::root_bisection(
-                [=](Scalar x) -> Scalar { return (x + x * x * x / 3 - M_anomaly) / (1 + x * x); }, -space::consts::pi,
-                space::consts::pi);
+                    [=](Scalar x) -> Scalar { return (x + x * x * x / 3 - M_anomaly) / (1 + x * x); }, -hub::consts::pi,
+                    hub::consts::pi);
         else {
             spacehub_abort("Eccentricity cannot be negative, Nan or inf!");
         }
@@ -360,7 +362,7 @@ namespace space::orbit {
     Scalar T_anomaly_to_E_anomaly(Scalar T_anomaly, Scalar e) {
         if (math::iseq(e, 1.0)) {
             return tan(0.5 * T_anomaly);
-        } else if (0 <= e && e < 1) {
+        } else if (0.0 <= e && e < 1) {
             auto cos_T = cos(T_anomaly);
             return acos((e + cos_T) / (1 + e * cos_T));
         } else if (e > 1) {
@@ -404,6 +406,7 @@ namespace space::orbit {
     Scalar T_anomaly_to_M_anomaly(Scalar T_anomaly, Scalar e) {
         E_anomaly_to_M_anomaly(T_anomaly_to_E_anomaly(T_anomaly, e), e);
     }
+
     template <typename T>
     constexpr OrbitType classify_orbit(T eccentricity) {
         if (0 <= eccentricity && eccentricity < 1) {
@@ -425,7 +428,9 @@ namespace space::orbit {
     KeplerOrbit<Real>::KeplerOrbit(Scalar m_1, Scalar m_2, Scalar semi_latus_rectum, Scalar eccentricity,
                                    T1 inclination, T2 longitude_of_ascending_node, T3 argument_of_periapsis,
                                    T4 true_anomaly) {
-        if (semi_latus_rectum < 0) spacehub_abort("Semi-latus rectum cannot be negative");
+        if (semi_latus_rectum <= 0) {
+            spacehub_abort("Semi-latus rectum must be positive");
+        }
 
         orbit_type = classify_orbit(eccentricity);
 
@@ -440,23 +445,25 @@ namespace space::orbit {
 
         if constexpr (std::is_same_v<T1, RandomIndicator>) {
             shuffle_i();
+
         } else {
             i = inclination;
         }
 
         if constexpr (std::is_same_v<T2, RandomIndicator>) {
             shuffle_Omega();
+
         } else {
             Omega = longitude_of_ascending_node;
         }
 
-        if (std::is_same_v<T3, RandomIndicator>) {
+        if constexpr (std::is_same_v<T3, RandomIndicator>) {
             shuffle_omega();
         } else {
             omega = argument_of_periapsis;
         }
 
-        if (std::is_same_v<T4, RandomIndicator>) {
+        if constexpr (std::is_same_v<T4, RandomIndicator>) {
             shuffle_nu();
         } else {
             nu = true_anomaly;
@@ -495,10 +502,10 @@ namespace space::orbit {
     template <CONCEPT_ANGLE T1, CONCEPT_ANGLE T2, CONCEPT_ANGLE T3>
     HyperOrbit::HyperOrbit(Scalar m_1, Scalar m_2, Scalar v_inf, Scalar b, T1 inclination,
                            T2 longitude_of_ascending_node, T3 argument_of_periapsis, Scalar r, Hyper in_out)
-        : KeplerOrbit<double>(m_1, m_2, 0.0, 0.0, inclination, longitude_of_ascending_node, argument_of_periapsis,
+        : KeplerOrbit<double>(m_1, m_2, 1.0, 0.0, inclination, longitude_of_ascending_node, argument_of_periapsis,
                               0.0) {
         this->orbit_type = OrbitType::Hyperbola;
-        Scalar u = space::consts::G * (m_1 + m_2);
+        Scalar u = hub::consts::G * (m_1 + m_2);
         Scalar a = -u / (v_inf * v_inf);
         this->e = sqrt(1 + b * b / (a * a));
         this->p = a * (1 - e * e);
@@ -656,13 +663,13 @@ namespace space::orbit {
     /**
      * @brief Transfer Kepler orbit parameters to relative position and velocity between two component in orbit.
      *
-     * @tparam Scalar
+     * @tparam Vector
      * @param args
      * @return auto
      */
-    template <typename Scalar>
-    auto orbit_to_coord(KeplerOrbit<Scalar> const &args) {
-        using Vector = Vec3<Scalar>;
+    template <typename Vector>
+    auto orbit_to_coord(KeplerOrbit<typename Vector::value_type> const &args) {
+        using Scalar = typename Vector::value_type;
 
         Scalar u = (args.m1 + args.m2) * consts::G;
 
@@ -686,34 +693,33 @@ namespace space::orbit {
         return (dr * (norm2(dv) - u * re_norm(dr)) - dv * dot(dr, dv)) / u;
     }
 
-    template <typename Scalar>
-    inline auto calc_runge_lenz_vector(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
-        using Vector = Vec3<Scalar>;
-        return calc_runge_lenz_vector(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
-    }
+    /*
+        template <typename Vector>
+        inline auto calc_runge_lenz_vector(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar
+       dvz) { using Vector = Vec3<Scalar>; return calc_runge_lenz_vector(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
+        }*/
 
     template <typename Vector, typename Scalar>
     inline Scalar calc_eccentricity(Scalar u, Vector const &dr, Vector const &dv) {
         return norm(dr * (norm2(dv) - u * re_norm(dr)) - dv * dot(dr, dv)) / u;
     }
-
-    template <typename Scalar>
-    inline auto calc_eccentricity(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
-        using Vector = Vec3<Scalar>;
-        return calc_eccentricity(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
-    }
+    /*
+        template <typename Scalar>
+        inline auto calc_eccentricity(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
+            using Vector = Vec3<Scalar>;
+            return calc_eccentricity(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
+        }*/
 
     template <typename Vector, typename Scalar>
     inline Scalar calc_semi_major_axis(Scalar u, Vector const &dr, Vector const &dv) {
         Scalar r = norm(dr);
         return -u * r / (r * norm2(dv) - 2 * u);
     }
-
-    template <typename Scalar>
-    inline Scalar calc_semi_major_axis(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
-        using Vector = Vec3<Scalar>;
-        return calc_semi_major_axis(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
-    }
+    /*
+        template <typename Scalar>
+        inline Scalar calc_semi_major_axis(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar
+       dvz) { using Vector = Vec3<Scalar>; return calc_semi_major_axis(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
+        }*/
 
     template <typename Vector, typename Scalar>
     auto calc_a_e(Scalar u, Vector const &dr, Vector const &dv) {
@@ -727,11 +733,11 @@ namespace space::orbit {
         return std::make_tuple(a, e);
     }
 
-    template <typename Scalar>
-    inline auto calc_a_e(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
-        using Vector = Vec3<Scalar>;
-        return calc_a_e(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
-    }
+    /*  template <typename Scalar>
+      inline auto calc_a_e(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
+          using Vector = Vec3<Scalar>;
+          return calc_a_e(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
+      }*/
 
     template <typename Vector, typename Scalar>
     auto calc_a_RL_vector(Scalar u, Vector const &dr, Vector const &dv) {
@@ -745,11 +751,11 @@ namespace space::orbit {
         return std::make_tuple(a, e);
     }
 
-    template <typename Scalar>
+    /*template <typename Scalar>
     inline auto calc_a_RL_vector(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
         using Vector = Vec3<Scalar>;
         return calc_a_RL_vector(u, Vector(dx, dy, dz), Vector(dvx, dvy, dvz));
-    }
+    }*/
 
     template <typename Scalar>
     inline auto period(Scalar m1, Scalar m2, Scalar a) {
@@ -773,6 +779,8 @@ namespace space::orbit {
             return 0.5 * sqrt(a * a * a / u) * M_anomaly;
         } else if (obt_type == OrbitType::Hyperbola) {
             return sqrt(-a * a * a / u) * M_anomaly;
+        } else {
+            return 0.0;
         }
     }
 
@@ -811,4 +819,4 @@ namespace space::orbit {
         return std::max(r1, r2);
     }
 
-}  // namespace space::orbit
+}  // namespace hub::orbit

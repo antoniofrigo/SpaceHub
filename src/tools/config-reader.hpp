@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -33,10 +33,10 @@ License
 #include "../dev-tools.hpp"
 
 /**
- * @namespace space::tools
- * space name for tools
+ * @namespace hub::tools
+ * hub name for tools
  */
-namespace space::tools {
+namespace hub::tools {
 
     /**
      *
@@ -60,9 +60,8 @@ namespace space::tools {
 
        private:
         std::unordered_map<std::string, std::string> map_;
-
-        static auto classify_string(const std::string &s);
     };
+
     /*---------------------------------------------------------------------------*\
           Class ConfigReader Implementation
     \*---------------------------------------------------------------------------*/
@@ -101,31 +100,8 @@ namespace space::tools {
         }
     }
 
-    auto ConfigReader::classify_string(const std::string &s) {
-        bool with_point{false};
-        auto it = s.begin();
-        while (it != s.end() && std::isdigit(*it)) {
-            if (*it == '.') with_point = true;
-            ++it;
-        }
-
-        if (s.empty()) {
-            return ConfigDtype::Empty;
-        } else {
-            if (it != s.end()) {
-                return ConfigDtype::String;
-            } else {
-                if (with_point) {
-                    return ConfigDtype::Float;
-                } else {
-                    return ConfigDtype::Integer;
-                }
-            }
-        }
-    }
-
     template <typename... Args>
-    void read_command_line(int argc, char **argv, Args &&... args) {
+    void read_command_line(int argc, char **argv, Args &&...args) {
         constexpr size_t n = sizeof...(Args);
 
         if (argc != n + 1) {
@@ -206,4 +182,4 @@ namespace space::tools {
     tools::OptArg __VA_ARGS__;         \
     read_command_line(ARGC, ARGV, __VA_ARGS__);
 
-}  // namespace space::tools
+}  // namespace hub::tools

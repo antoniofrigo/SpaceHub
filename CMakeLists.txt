@@ -2,16 +2,19 @@
 cmake_minimum_required(VERSION 3.12)
 project(SpaceHub)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -march=native -pthread ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -Wall -pthread")
+if(MPFR_VERSION_MAJOR)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lmpfr -lgmp ")
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++17 -O3 -pthread -march=native ")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++17 -O3 -pthread -march=native ")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS}  ")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ")
 
 set(TMP_HEADER_FILES
         src/args-callback/callbacks.hpp
 
         src/integrator/symplectic/symplectic-integrator.hpp
-        src/integrator/Gauss-Dadau.hpp
+        src/integrator/Gauss-Radau.hpp
 
         src/interaction/post-newtonian.hpp
         src/interaction/newtonian.hpp
@@ -27,7 +30,7 @@ set(TMP_HEADER_FILES
         src/multi-thread/concurrent-queue.h
         src/multi-thread/ciostream.hpp
 
-        src/ode-iterator/Burlish-Stoer.hpp
+        src/ode-iterator/Bulirsch-Stoer.hpp
         src/ode-iterator/const-iterator.hpp
         src/ode-iterator/IAS15.hpp
 
@@ -64,7 +67,7 @@ set(TMP_HEADER_FILES
         src/ode-iterator/error-checker/RMS.hpp
         src/ode-iterator/step-controller/PID-controller.hpp
         src/scattering/cross-section.hpp
-        src/ode-iterator/error-checker/IAS15-error.hpp
+        src/ode-iterator/error-checker/max-ratio-error.hpp
         src/orbits/particle-manip.hpp
         src/IO.hpp
         src/args-callback/collision.hpp
@@ -85,11 +88,11 @@ set(TWOBODY_TEST
 set(SOLAR_TEST
         test/regression_test/rtest_solar-system.cpp)
 
+set(EARTH_TEST
+        test/regression_test/rtest_earth-system.cpp)
+
 set(KOZAI_TEST
         test/regression_test/rtest_kozai.cpp)
-
-set(IAS15_TEST
-        test/regression_test/rtest_IAS15.cpp)
 
 set(PN_P_TEST
         test/regression_test/rtest_PN_precession.cpp)
@@ -100,13 +103,17 @@ set(PN_R_TEST
 set(IMPROVEMENT_TEST
         test/regression_test/rtest_improvement.cpp)
 
+add_executable(SpaceHub_simple_test ${TMP_HEADER_FILES} test/regression_test/rtest_basic.cpp)
+
+add_executable(SpaceHub_ABITS_test ${TMP_HEADER_FILES} test/regression_test/rtest_AR_ABITS.cpp)
+
 add_executable(SpaceHub_unit_test ${UNIT_TEST} ${TMP_HEADER_FILES})
 
 add_executable(SpaceHub_kozai_test ${TMP_HEADER_FILES} ${KOZAI_TEST})
 
-add_executable(SpaceHub_twobody_test ${TMP_HEADER_FILES} ${TWOBODY_TEST})
+add_executable(SpaceHub_earth_test ${TMP_HEADER_FILES} ${EARTH_TEST})
 
-add_executable(SpaceHub_IAS15_test ${TMP_HEADER_FILES} ${IAS15_TEST})
+add_executable(SpaceHub_twobody_test ${TMP_HEADER_FILES} ${TWOBODY_TEST})
 
 add_executable(SpaceHub_improve_test ${TMP_HEADER_FILES} ${IMPROVEMENT_TEST})
 

@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -26,7 +26,7 @@ License
 
 #include <chrono>
 
-namespace space::tools {
+namespace hub::tools {
     /*---------------------------------------------------------------------------*\
           Class Timer Declaration
     \*---------------------------------------------------------------------------*/
@@ -34,7 +34,7 @@ namespace space::tools {
      * High precision timer for benchmark.
      */
     class Timer {
-        using Time = std::chrono::time_point<std::chrono::high_resolution_clock>;
+        using Time = std::chrono::time_point<std::chrono::steady_clock>;
 
        public:
         /**
@@ -46,7 +46,7 @@ namespace space::tools {
          * Get the time in milli-second.
          * @return Time duration from start().
          */
-        float get_time();
+        double get_time();
 
         /**
          * Pause the timer.
@@ -60,7 +60,7 @@ namespace space::tools {
 
        private:
         Time start_;
-        float duration_{0};
+        double duration_{0};
         bool active_{false};
     };
     /*---------------------------------------------------------------------------*\
@@ -68,15 +68,15 @@ namespace space::tools {
     \*---------------------------------------------------------------------------*/
     void Timer::start() {
         active_ = true;
-        start_ = std::chrono::high_resolution_clock::now();
+        start_ = std::chrono::steady_clock::now();
     }
 
-    float Timer::get_time() {
+    double Timer::get_time() {
         if (active_) {
-            auto now = std::chrono::high_resolution_clock::now();
-            auto len = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_);
-            return duration_ + static_cast<float>(len.count()) * std::chrono::milliseconds::period::num /
-                                   std::chrono::milliseconds::period::den;
+            auto now = std::chrono::steady_clock::now();
+            auto len = std::chrono::duration_cast<std::chrono::nanoseconds>(now - start_);
+            return duration_ + static_cast<double>(len.count()) * std::chrono::nanoseconds::period::num /
+                                   std::chrono::nanoseconds::period::den;
         } else
             return duration_;
     }
@@ -90,4 +90,4 @@ namespace space::tools {
         active_ = false;
         duration_ = 0;
     }
-}  // namespace space::tools
+}  // namespace hub::tools

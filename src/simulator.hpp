@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -29,8 +29,7 @@ License
 #include "IO.hpp"
 #include "core-computation.hpp"
 #include "dev-tools.hpp"
-
-namespace space {
+namespace hub {
 
     /*---------------------------------------------------------------------------*\
         Class RunArgs Declaration
@@ -86,12 +85,12 @@ namespace space {
         /**
          * The absolute error tolerance.
          */
-        Scalar atol{1e-15};
+        Scalar atol{0.0};
 
         /**
          * The relative error tolerance.
          */
-        Scalar rtol{1e-13};
+        Scalar rtol{1e-14};
 
         // public methods
         /**
@@ -137,7 +136,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to start point and every post-step.
          *
-         * @tparam Func Callable type that is conversional to member type Callback.
+         * @tparam Func Callable type that is convertible to member type Callback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments.If func accepts more than one arguments, you can bind the rest arguments
@@ -149,7 +148,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to pre-step-operations.
          *
-         * @tparam Func Callable type that is conversional to member type Callback.
+         * @tparam Func Callable type that is convertible to member type Callback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments.If func accepts more than one arguments, you can bind the rest arguments
@@ -161,7 +160,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to post-step-operations.
          *
-         * @tparam Func Callable type that is conversional to member type Callback.
+         * @tparam Func Callable type that is convertible to member type Callback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments. If func accepts more than one arguments, you can bind the rest arguments
@@ -173,7 +172,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to stop-point-operations.
          *
-         * @tparam Func Callable type that is conversional to member type Callback.
+         * @tparam Func Callable type that is convertible to member type Callback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments. If func accepts more than one arguments, you can bind the rest arguments
@@ -185,7 +184,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to start-point-operations.
          *
-         * @tparam Func Callable type that is conversional to member type Callback.
+         * @tparam Func Callable type that is convertible to member type Callback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments. If func accepts more than one arguments, you can bind the rest arguments
@@ -197,7 +196,7 @@ namespace space {
         /**
          * Register a callable object(function pointer, functor, lambda,etc...) to stop conditions.
          *
-         * @tparam Func Callable type that is conversional to member type Stopback.
+         * @tparam Func Callable type that is convertible to member type Stopback.
          * @tparam Args Type of the binding arguments.
          * @param[in] func Callable object.
          * @param[in] args Binding arguments. If func accepts more than one arguments, you can bind the rest arguments
@@ -208,23 +207,21 @@ namespace space {
 
         /**
          * Add the duration time of the integration as a stop condition.
-         * @tparam T Floating point like scalar.
          * @param[in] end Duration time of the integration.
          */
-        template <typename T>
-        void add_stop_condition(T end);
+        void add_stop_condition(Scalar end);
 
         /**
          * Check if the integration duration time is set.
          * @return boolean
          */
-        [[nodiscard]] bool is_end_time_set() const { return is_end_time_set_; }
+        bool is_end_time_set() const { return is_end_time_set_; }
 
         /**
          * Check if any of the stop condition(except the duration time) is set.
          * @return boolean
          */
-        [[nodiscard]] bool is_stop_condition_set() const { return stop_cond_.size() > 0; }
+        bool is_stop_condition_set() const { return stop_cond_.size() > 0; }
 
        private:
         // private members
@@ -249,8 +246,8 @@ namespace space {
     /**
      * Wrapper to integrate the particle system and ode-iterator to perform the simulation.
      *
-     * @tparam ParticleSys Any implementation of concept `particle_system::ParticleSystem`.
-     * @tparam OdeIterator Any implementation of concept `ode_iterator::OdeIterator`.
+     * @tparam ParticleSys Any implementation of concept `system::ParticleSystem`.
+     * @tparam OdeIterator Any implementation of concept `ode::OdeIterator`.
      */
     template <typename ParticleSys, typename OdeIterator>
     class Simulator {
@@ -261,14 +258,16 @@ namespace space {
         /**
          * Run arguments that is used to set all arguments needed by Simulator.
          */
-        using RunArgs = space::RunArgs<ParticleSys>;
+        using RunArgs = hub::RunArgs<ParticleSys>;
+
+        using ParticleSystem = ParticleSys;
 
         /**
          * Particle type that is used to create the initial conditions to initialize the Simulator.
          */
         using Particle = typename ParticleSys::Particle;
 
-        SPACEHUB_READ_ACCESSOR(auto, particles, particles_);
+        SPACEHUB_READ_ACCESSOR(ParticleSys, particles, particles_);
 
         // Constructors
         SPACEHUB_MAKE_CONSTRUCTORS(Simulator, delete, default, default, default, default);
@@ -352,10 +351,8 @@ namespace space {
 
     template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
     bool RunArgs<ParticleSys>::check_stops(ParticleSys &particle_system, Scalar step_size) const {
-        for (auto const &check : stop_cond_) {
-            if (check(particle_system, step_size)) return true;
-        }
-        return false;
+        return std::any_of(stop_cond_.begin(), stop_cond_.end(),
+                           [&](auto cond) { return cond(particle_system, step_size); });
     }
 
     template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
@@ -416,8 +413,7 @@ namespace space {
     }
 
     template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
-    template <typename T>
-    void RunArgs<ParticleSys>::add_stop_condition(T end) {
+    void RunArgs<ParticleSys>::add_stop_condition(Scalar end) {
         end_time = end;
         is_end_time_set_ = true;
     }
@@ -440,7 +436,7 @@ namespace space {
     template <typename ParticleSys, typename OdeIterator>
     void Simulator<ParticleSys, OdeIterator>::run(RunArgs const &run_args) {
         if (!run_args.is_stop_condition_set() && !run_args.is_end_time_set()) {
-            space::spacehub_abort("Use 'add_stop_condition' to set stop condition.");
+            spacehub_abort("Use 'add_stop_condition' to set stop condition.");
         }
 
         step_size_ = run_args.step_size;
@@ -450,14 +446,19 @@ namespace space {
                          calc::calc_fall_free_time(particles_.mass(), particles_.pos());
         }
 
-        Scalar end_time = space::unit::T_hubble;
+        Scalar end_time = hub::unit::T_hubble;
 
         if (run_args.is_end_time_set()) {
             end_time = run_args.end_time;
         }
 
         if (particles_.time() >= end_time) {
-            space::print(std::cout, "Warning: The stop time is '<=' to the start time!");
+            hub::print(std::cout, "Warning: The stop time is '<=' to the start time!");
+        }
+
+        if (particles_.step_scale() == 0.0) {
+            hub::print(std::cout, "regularization function === 0. Use other method instead\n");
+            return;
         }
 
         if constexpr (HAS_METHOD(OdeIterator, set_atol, Scalar)) {
@@ -470,7 +471,7 @@ namespace space {
 
         run_args.start_operations(particles_, step_size_);
         for (; particles_.time() < end_time && !run_args.check_stops(particles_, step_size_);) {
-            Scalar rest_step = (end_time - particles_.time()) * calc::calc_step_scale(particles_);
+            Scalar rest_step = (end_time - particles_.time()) * particles_.step_scale();
             if (step_size_ <= rest_step) [[likely]] {
                 run_args.pre_operations(particles_, step_size_);
                 advance_one_step();
@@ -484,7 +485,6 @@ namespace space {
             }
         }
         run_args.stop_operations(particles_, step_size_);
-        // std::cout << "reject rate:" << iterator_.reject_rate() << "\n";
     }
 
     template <typename ParticleSys, typename OdeIterator>
@@ -494,4 +494,4 @@ namespace space {
         particles_.post_iter_process();
     }
 
-}  // namespace space
+}  // namespace hub

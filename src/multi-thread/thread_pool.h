@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-namespace space::multi_thread {
+namespace hub::multi_thread {
     /*---------------------------------------------------------------------------*\
          Class ThreadPool Declaration
     \*---------------------------------------------------------------------------*/
@@ -36,6 +36,7 @@ namespace space::multi_thread {
         ThreadPool(size_t max_thread, size_t max_tasks);
 
         ~ThreadPool();
+
         std::vector<std::thread> workers_;
         std::queue<Task> tasks_;
         std::mutex lock_;
@@ -43,6 +44,7 @@ namespace space::multi_thread {
         std::atomic_bool stop_;
         const size_t max_tasks_;
     };
+
     /*---------------------------------------------------------------------------*\
          Class ThreadPool Implementation
     \*---------------------------------------------------------------------------*/
@@ -84,11 +86,11 @@ namespace space::multi_thread {
         {
             std::unique_lock<std::mutex> lock(lock_);
             auto task_num = tasks_.size();
-            if (stop_ || task_num > max_tasks_) throw std::runtime_error("Task queue is full/stoped!\n");
+            if (stop_ || task_num > max_tasks_) throw std::runtime_error("Task queue is full/stopped!\n");
 
             tasks_.emplace([job]() { (*job)(); });
         }
         cv_.notify_one();
         return result;
     }
-}  // namespace space::multi_thread
+}  // namespace hub::multi_thread

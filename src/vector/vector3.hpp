@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -28,8 +28,9 @@ License
 #include <iostream>
 
 #include "../dev-tools.hpp"
+#include "lazy-vec3.h"
+namespace hub {
 
-namespace space {
     /**
      * Generic 3-d vector (x,y,z) with Scalar x, y, z.
      * */
@@ -71,6 +72,12 @@ namespace space {
          */
         Vec3(value_type vx, value_type vy, value_type vz) : x(vx), y(vy), z(vz) {}
 
+        template <typename U>
+        Vec3(Vec3<U> const &v) : x(v.x), y(v.y), z(v.z) {}
+
+        // template <typename U>
+        // Vec3(lazy::LazyVec3<U> const &v) : x(v.x), y(v.y), z(v.z) {}
+
         /** Addition by wise */
         template <typename U>
         inline Vec3 operator+(const Vec3<U> &v) const {
@@ -89,7 +96,7 @@ namespace space {
             return Vec3(x * v.x, y * v.y, z * v.z);
         }
 
-        /** Divition by wise */
+        /** Division by wise */
         template <typename U>
         inline Vec3 operator/(const Vec3<U> &v) const {
             return Vec3(x / v.x, y / v.y, z / v.z);
@@ -142,18 +149,21 @@ namespace space {
         }
 
         /** Addition assignment for scalar*/
+
         inline const Vec3 &operator+=(const value_type c) {
             x += c, y += c, z += c;
             return *this;
         }
 
         /** Subtraction assignment for scalar*/
+
         inline const Vec3 &operator-=(const value_type c) {
             x -= c, y -= c, z -= c;
             return *this;
         }
 
         /** Multiple assignment for scalar*/
+
         inline const Vec3 &operator*=(const value_type c) {
             x *= c, y *= c, z *= c;
             return *this;
@@ -200,7 +210,7 @@ namespace space {
 
         /** output stream */
         friend std::ostream &operator<<(std::ostream &output, const Vec3 &v) {
-            output << v.x << ',' << v.y << ',' << v.z;
+            print_csv(output, v.x, v.y, v.z);
             return output;
         }
 
@@ -232,7 +242,7 @@ namespace space {
         return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     }
 
-    /**  Calculate the inverse lenght of a vector*/
+    /**  Calculate the inverse length of a vector*/
     template <typename T>
     inline T re_norm(const Vec3<T> &v) {
         return 1.0 / sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
@@ -295,7 +305,7 @@ namespace space {
      * Alias for bool 3-d vector
      */
     using vec3b = Vec3<bool>;
-}  // namespace space
+}  // namespace hub
 
-//#include "vector3d.hpp"   //Specilization of Vec3<double> with AVX;
-//#include "vector3pd.hpp"  //Specilization of Vec3<double_p> with AVX;
+//#include "vector3d.hpp"   //Specialization of Vec3<double> with AVX;
+//#include "vector3pd.hpp"  //Specialization of Vec3<double_k> ;

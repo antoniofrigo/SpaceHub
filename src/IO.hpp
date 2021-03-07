@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -29,7 +29,8 @@ License
 #include <tuple>
 #include <vector>
 
-namespace space {
+#include "small-vector.hpp"
+namespace hub {
 
     /**
      * @brief Print variables to an output stream
@@ -41,7 +42,7 @@ namespace space {
      * @return Output stream.
      */
     template <typename Ostream, typename... Args>
-    auto &print(Ostream &os, Args &&... args) {
+    auto &print(Ostream &os, Args &&...args) {
         (os << ... << std::forward<Args>(args));
         return os;
     }
@@ -56,7 +57,7 @@ namespace space {
      * @return Input stream.
      */
     template <typename Istream, typename... Args>
-    auto &input(Istream &istream, Args &&... args) {
+    auto &input(Istream &istream, Args &&...args) {
         (istream >> ... >> std::forward<Args>(args));
         return istream;
     }
@@ -69,7 +70,7 @@ namespace space {
      * @return std::cout.
      */
     template <typename... Args>
-    auto &std_print(Args &&... args) {
+    auto &std_print(Args &&...args) {
         (std::cout << ... << std::forward<Args>(args));
         return std::cout;
     }
@@ -82,7 +83,7 @@ namespace space {
      * @return std::cin.
      */
     template <typename... Args>
-    auto &std_input(Args &&... args) {
+    auto &std_input(Args &&...args) {
         (std::cin >> ... >> std::forward<Args>(args));
         return std::cin;
     }
@@ -99,14 +100,14 @@ namespace space {
      * @return auto& output stream.
      */
     template <typename Ostream, typename Arg, typename... Args>
-    auto &print_csv(Ostream &out, Arg &&arg, Args &&... args) {
+    auto &print_csv(Ostream &out, Arg &&arg, Args &&...args) {
         out << arg;
         (..., (out << ',' << std::forward<Args>(args)));
         return out;
     }
 
     /**
-     * @brief Print space seperated value to an ostream.
+     * @brief Print hub separated value to an ostream.
      *
      * @tparam Ostream Type of ostream.
      * @tparam Args Variadic type(any).
@@ -114,14 +115,14 @@ namespace space {
      * @param[in] args Variables.
      */
     template <typename Ostream, typename... Args>
-    void display(Ostream &out, Args &&... args) {
+    void display(Ostream &out, Args &&...args) {
         (..., (out << std::forward<Args>(args) << ' '));
     }
 
     template <typename... Args>
     std::ostream &operator<<(std::ostream &out, std::tuple<Args...> const &tup) {
         std::apply(
-            [&](auto &&arg, auto &&... args) {
+            [&](auto &&arg, auto &&...args) {
                 out << arg;
                 (..., (out << ' ' << args));
             },
@@ -131,7 +132,7 @@ namespace space {
 
     template <typename... Args>
     std::istream &operator>>(std::istream &in, std::tuple<Args...> &&tup) {
-        std::apply([&](auto &&... args) { (..., (in >> args)); }, tup);
+        std::apply([&](auto &&...args) { (..., (in >> args)); }, tup);
         return in;
     }
 
@@ -150,4 +151,12 @@ namespace space {
         }
         return os;
     }
-}  // namespace space
+
+    template <typename T, unsigned int N>
+    std::ostream &operator<<(std::ostream &os, llvm::SmallVector<T, N> const &container) {
+        for (auto const &c : container) {
+            os << c << ' ';
+        }
+        return os;
+    }
+}  // namespace hub

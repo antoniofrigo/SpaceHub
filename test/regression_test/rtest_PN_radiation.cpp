@@ -11,26 +11,26 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 #include "../../src/spaceHub.hpp"
 
-USING_NAMESPACE_SPACEHUB_ALL;
+using namespace hub::unit;
 
 template <typename Solver>
-auto BHB(double e = 0) {
+auto BHB(double e = 0.9) {
     using Particle = typename Solver::Particle;
-    using namespace space;
-    using namespace space::unit;
-    using namespace space::orbit;
-    using namespace space::consts;
+    using namespace hub;
+    using namespace hub::unit;
+    using namespace hub::orbit;
+    using namespace hub::consts;
 
     Particle bh1{30_Ms}, bh2{50_Ms};
-    auto orbit = EllipOrbit(bh1.mass, bh2.mass, 0.01_AU, 0.9, 0, 0, 0, 0);
+    auto orbit = EllipOrbit(bh1.mass, bh2.mass, 0.01_AU, e, 0, 0, 0, 0);
 
     move_particles(orbit, bh2);
 
@@ -42,8 +42,8 @@ auto BHB(double e = 0) {
 template <typename Solver>
 void PN_radiation_test(std::string const &fname, double end_time, double rtol,
                        std::vector<typename Solver::Particle> const &p) {
-    using namespace space;
-    using namespace run_operations;
+    using namespace hub;
+    using namespace callback;
     using namespace tools;
 
     Solver sim{0, p};
@@ -54,7 +54,7 @@ void PN_radiation_test(std::string const &fname, double end_time, double rtol,
 
     std::cout << std::setprecision(16);
 
-    args.add_operation(TimeSlice(DefaultWriter(fname + ".txt"), 0, end_time, 10000));
+    args.add_operation(TimeSlice(DefaultWriter(fname + ".txt"), 0.0, end_time));
 
     args.add_stop_condition(end_time);
 
@@ -68,47 +68,22 @@ void PN_radiation_test(std::string const &fname, double end_time, double rtol,
 }
 
 template <typename simulation>
-void run(std::string const &sim_type) {
-    auto twobody_sys = BHB<simulation>();
+void run(std::string const &sim_type, double e) {
+    auto twobody_sys = BHB<simulation>(e);
 
-    PN_radiation_test<simulation>("PN-radiation-" + sim_type, 70_year, 1e-15, twobody_sys);
+    PN_radiation_test<simulation>("PN-radiation-" + sim_type, 70_year, 1e-14, twobody_sys);
 }
 
 int main(int argc, char **argv) {
-    using namespace interactions;
+    using namespace hub;
+    using f = force::Interactions<force::NewtonianGrav, force::PN2p5>;
 
-    using type = Types<double>;
+    // using f = force::Interactions<force::NewtonianGrav>;
 
-    using force = interactions::Interactions<interactions::NewtonianGrav>;
-
-    using particles = PointParticles<type>;
-
-    using sim_sys = SimpleSystem<particles, force>;
-
-    using regu_sys = RegularizedSystem<particles, force, ReguType::LogH>;
-
-    using chain_sys = ChainSystem<particles, force>;
-
-    using arch_sys = ARchainSystem<particles, force, ReguType::LogH>;
-
-    using base_integrator = LeapFrogDKD<type>;
-    //    using iter = ConstOdeIterator<Symplectic2nd>;
-
-    using err_estimator = WorstOffender<type>;
-
-    using step_controller = PIDController<type>;
-
-    using iter = BurlishStoer<base_integrator, err_estimator, step_controller>;
-
-    using ias15_iter = IAS15<integrator::GaussDadau<type>, IAS15Error<type>, step_controller>;
-
-    /*run<Simulator<sim_sys, iter>>("sim");
-
-    run<Simulator<regu_sys, iter>>("regu");
-
-    run<Simulator<chain_sys, iter>>("chain");*/
-
-    run<Simulator<arch_sys, iter>>("arch");
-
+    using method = methods::AR_Chain_Plus<f>;
+    run<method>("e=0894", 0.894);
+    run<method>("e=0896", 0.896);
+    run<method>("e=0898", 0.898);
+    run<method>("e=09", 0.9);
     return 0;
 }

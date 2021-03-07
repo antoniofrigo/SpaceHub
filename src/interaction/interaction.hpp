@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -26,16 +26,30 @@ License
 
 #include "../core-computation.hpp"
 #include "../spacehub-concepts.hpp"
-namespace space::interactions {
+namespace hub::force {
 
     /*---------------------------------------------------------------------------*\
         Class Interactions Declaration
     \*---------------------------------------------------------------------------*/
+    /**
+     * @brief Interaction adapter. Put all interactions together.
+     *
+     * @tparam InternalForce Internal force type
+     * @tparam ExtraForce External force types
+     */
     template <CONCEPT_FORCE InternalForce, CONCEPT_FORCE... ExtraForce>
     class Interactions {
        public:
+        /**
+         * @brief Any external velocity dependent force?
+         *
+         */
         static constexpr bool ext_vel_dep{(... || ExtraForce::vel_dependent)};
 
+        /**
+         * @brief Any external velocity independent force?
+         *
+         */
         static constexpr bool ext_vel_indep{(... || !ExtraForce::vel_dependent)};
 
         /**
@@ -52,11 +66,10 @@ namespace space::interactions {
         /**
          * Evaluate the external acceleration of the current state of a given particle system.
          *
-         * @brief
          *
-         * @tparam Particles
-         * @param particles
-         * @param acceleration
+         * @tparam Particles Type of the particle system.
+         * @param[in] particles The particle system need to be evaluated.
+         * @param[out] acceleration The output of the evaluated acceleration.
          */
         template <CONCEPT_PARTICLES_DATA Particles>
         static void eval_extra_acc(Particles const &particles, typename Particles::VectorArray &acceleration);
@@ -95,32 +108,65 @@ namespace space::interactions {
         static void eval_newtonian_acc(Particles const &particles, typename Particles::VectorArray &acceleration);
     };
 
+    /**
+     * @brief Acceleration data set.
+     *
+     * @tparam Interactions Interaction types that provide constexpr member 'ext_vel_indep' and 'ext_vel_dep' to
+     * determine the data layout
+     * @tparam VectorArray 3D Vector array type
+     */
     template <typename Interactions, typename VectorArray>
     class InteractionData {
        public:
         // Constructors
         SPACEHUB_MAKE_CONSTRUCTORS(InteractionData, default, default, default, default, default);
 
+        /**
+         * @brief Construct a new Interaction Data object
+         *
+         * @param[in] size Number of Particles.
+         */
         explicit InteractionData(size_t size);
 
         // Public methods
-
+        /**
+         * @brief 3D vector array to store the total acceleration.
+         *
+         */
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, acc, acc_);
 
+        /**
+         * @brief 3D vector array to store the Newtonian acceleration.
+         *
+         */
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, newtonian_acc, newtonian_acc_);
 
+        /**
+         * @brief 3D vector array to store the total velocity independent acceleration.
+         *
+         */
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, tot_vel_indep_acc, tot_vel_indep_acc_);
 
+        /**
+         * @brief 3D vector array to store the velocity independent acceleration.(if no external velocity independent
+         * appears, this becomes empty type).
+         *
+         */
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, ext_vel_indep_acc, ext_vel_indep_acc_);
 
+        /**
+         * @brief 3D vector array to store the velocity dependent acceleration.(if no external velocity dependent
+         * appears, this becomes empty type).
+         *
+         */
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, ext_vel_dep_acc, ext_vel_dep_acc_);
 
        private:
-        VectorArray acc_;
+        VectorArray acc_{0};
 
-        VectorArray newtonian_acc_;
+        VectorArray newtonian_acc_{0};
 
-        VectorArray tot_vel_indep_acc_;
+        VectorArray tot_vel_indep_acc_{0};
 
         std::conditional_t<Interactions::ext_vel_indep, VectorArray, Empty> ext_vel_indep_acc_;
 
@@ -168,8 +214,10 @@ namespace space::interactions {
     template <CONCEPT_PARTICLES_DATA Particles>
     void Interactions<InternalForce, ExtraForce...>::eval_extra_acc(const Particles &particles,
                                                                     typename Particles::VectorArray &acceleration) {
-        if constexpr (ext_vel_dep) {
+        if constexpr (ext_vel_dep || ext_vel_indep) {
             calc::array_set_zero(acceleration);
+        }
+        if constexpr (ext_vel_dep) {
             InvokeVelDepForce<ExtraForce...>::add_acc_to(particles, acceleration);
         }
         if constexpr (ext_vel_indep) {
@@ -218,4 +266,4 @@ namespace space::interactions {
             ext_vel_dep_acc_.resize(size);
         }
     }
-}  // namespace space::interactions
+}  // namespace hub::force

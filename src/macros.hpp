@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -25,18 +25,18 @@ License
 #pragma once
 
 /**
- * @namespace space::consts
- * Documentation for space
+ * @namespace hub::consts
+ * Documentation for hub
  */
-namespace space::consts {
+namespace hub::consts {
     constexpr double pi = 3.14159265358979323846;
 }
 
 /**
- * @namespace space::unit
- * Documentation for space
+ * @namespace hub::unit
+ * Documentation for hub
  */
-namespace space::unit {
+namespace hub::unit {
 
 #define MAKE_UNIT(NAME, UNIT)                                                                                 \
     constexpr double NAME = UNIT;                                                                             \
@@ -69,9 +69,9 @@ namespace space::unit {
     MAKE_UNIT(Mj, 317.8_Me)
     MAKE_UNIT(Mmoon, 0.012300_Me)
 
-}  // namespace space::unit
+}  // namespace hub::unit
 
-namespace space::consts {
+namespace hub::consts {
     constexpr double a_jupiter = 5.2044 * unit::AU;
     constexpr double e_jupiter = 0.0489;
     constexpr double LoAN_jupiter = 100.464 * unit::deg;
@@ -84,15 +84,14 @@ namespace space::consts {
     constexpr double AoP_neptune = 276.336 * unit::deg;
     constexpr double i_neptune = 6.43 * unit::deg;
 
-
     constexpr double a_mercury = 0.387098 * unit::AU;
     constexpr double e_mercury = 0.20563;
     constexpr double LoAN_mercury = 48.331 * unit::deg;
     constexpr double AoP_mercury = 29.124 * unit::deg;
     constexpr double i_mercury = 3.38 * unit::deg;
-}  // namespace space::consts
+}  // namespace hub::consts
 
-namespace space::consts {
+namespace hub::consts {
     constexpr double G = 1;
     constexpr double C = 299792.458 * unit::kms;
-}  // namespace space::consts
+}  // namespace hub::consts

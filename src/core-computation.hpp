@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -23,18 +23,28 @@ License
  * Header file.
  */
 #pragma once
-
+#ifdef _OPENMP
 #include <omp.h>
+#endif
+#include <algorithm>
+#include <numeric>
+#include <type_traits>
 
 #include "macros.hpp"
 #include "math.hpp"
 #include "spacehub-concepts.hpp"
 #include "vector/vector3.hpp"
+
+#ifdef __AVX__
+
+#include <x86intrin.h>
+
+#endif
 /**
- * @namespace space::calc
- * Documentation for space
+ * @namespace hub::calc
+ * Documentation for hub
  */
-namespace space::calc {
+namespace hub::calc {
 
     /**
      * @brief Calculate the sum of variables
@@ -92,9 +102,10 @@ namespace space::calc {
      */
     template <typename Array>
     void array_set_zero(Array &array) {
-        for (auto &a : array) {
-            a = 0;
-        }
+        std::fill(array.begin(), array.end(), typename Array::value_type{0});
+        /* for (auto &a : array) {
+             a = 0;
+         }*/
     }
 
     /**
@@ -127,7 +138,6 @@ namespace space::calc {
         DEBUG_MODE_ASSERT(b.size() == a.size(), "length of the array mismatch!");
         typename Array::value_type product{0};
         size_t const size = a.size();
-
         for (size_t i = 0; i < size; ++i) {
             product += (args[i] * ... * (a[i] * b[i]));
         }
@@ -146,12 +156,92 @@ namespace space::calc {
      * @param[in] args The rest arrays.
      */
     template <typename Array, typename... Args>
-    void array_add(Array &dst, Array const &a, Args const &...args) {
+    void array_add(Array &dst, Args const &...args) {
         size_t const size = dst.size();
 
-#pragma omp parallel for
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
-            dst[i] = a[i] + (args[i] + ...);
+            dst[i] = (args[i] + ...);
+        }
+    }
+
+    CREATE_MEMBER_CHECK(err);
+    CREATE_MEMBER_CHECK(x);
+    CREATE_MEMBER_CHECK(y);
+    CREATE_MEMBER_CHECK(z);
+
+#define IS_VECTOR3(CLASS) HAS_MEMBER(CLASS, x) && HAS_MEMBER(CLASS, y) && HAS_MEMBER(CLASS, z)
+
+    template <typename A1, typename A2>
+    void array_load_err(A1 &dst, A2 const &src) {
+        if constexpr (HAS_MEMBER(typename A1::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].err = src[i];
+            }
+        } else if constexpr (IS_VECTOR3(typename A1::value_type) &&
+                             HAS_MEMBER(typename A1::value_type::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].x.err = src[i].x;
+                dst[i].y.err = src[i].y;
+                dst[i].z.err = src[i].z;
+            }
+        }
+    }
+
+    template <typename A1, typename A2>
+    void array_save_err(A1 &dst, A2 const &src) {
+        if constexpr (HAS_MEMBER(typename A2::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i] = src[i].err;
+            }
+        } else if constexpr (IS_VECTOR3(typename A2::value_type) &&
+                             HAS_MEMBER(typename A2::value_type::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].x = src[i].x.err;
+                dst[i].y = src[i].y.err;
+                dst[i].z = src[i].z.err;
+            }
+        }
+    }
+
+    template <typename A1, typename A2>
+    void array_copy_err(A1 &dst, A2 const &src) {
+        if constexpr (HAS_MEMBER(typename A2::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].err = src[i].err;
+            }
+        } else if constexpr (IS_VECTOR3(typename A2::value_type) &&
+                             HAS_MEMBER(typename A2::value_type::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].x.err = src[i].x.err;
+                dst[i].y.err = src[i].y.err;
+                dst[i].z.err = src[i].z.err;
+            }
+        }
+    }
+
+    template <typename A1>
+    void array_set_err_zero(A1 &dst) {
+        if constexpr (HAS_MEMBER(typename A1::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].err = 0;
+            }
+        } else if constexpr (IS_VECTOR3(typename A1::value_type) &&
+                             HAS_MEMBER(typename A1::value_type::value_type, err)) {
+            size_t size = dst.size();
+            for (size_t i = 0; i < size; ++i) {
+                dst[i].x.err = 0;
+                dst[i].y.err = 0;
+                dst[i].z.err = 0;
+            }
         }
     }
 
@@ -166,14 +256,38 @@ namespace space::calc {
      * @param[in] a The input array.
      * @param[in] scale Scale factor.
      */
-    template <typename Array, typename Scalar>
-    void array_scale(Array &dst, Array const &a, Scalar scale) {
+    template <typename Array1, typename Array2, typename Scalar>
+    void array_scale(Array1 &dst, Array2 const &a, Scalar scale) {
         DEBUG_MODE_ASSERT(b.size() == a.size() || dst.size() >= a.size(), "length of the array mismatch!");
-        size_t const size = dst.size();
 
-#pragma omp parallel for
+        // std::transform(a.begin(), a.end(), dst.begin(), [=](auto x) { return scale * x; });
+        size_t const size = dst.size();
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
             dst[i] = a[i] * scale;
+        }
+    }
+
+    template <typename Array1, typename Array2, typename Array3, typename Scalar>
+    void array_scale_add(Array1 &dst, Array2 const &a, Array3 const &b, Scalar c) {
+        std::transform(a.begin(), a.end(), b.begin(), dst.begin(), [=](auto x, auto y) { return (x + y) * c; });
+    }
+
+    template <typename Array1, typename Array2, typename Array3, typename Scalar>
+    void array_scale_add(Array1 &dst, Array2 const &a, Scalar b, Array3 const &c, Scalar d) {
+        std::transform(a.begin(), a.end(), c.begin(), dst.begin(), [=](auto x, auto y) { return x * b + y * d; });
+    }
+
+    template <typename Array1, typename Array2, typename Scalar>
+    void array_div_scale(Array1 &dst, Array2 const &a, Scalar scale) {
+        DEBUG_MODE_ASSERT(b.size() == a.size() || dst.size() >= a.size(), "length of the array mismatch!");
+        // std::transform(a.begin(), a.end(), dst.begin(), [=](auto x) { return x / scale; });
+        size_t const size = dst.size();
+//#pragma omp parallel for
+#pragma GCC ivdep
+        for (size_t i = 0; i < size; i++) {
+            dst[i] = a[i] / scale;
         }
     }
 
@@ -190,71 +304,122 @@ namespace space::calc {
      * @param[in] args The rest arrays.
      */
     template <typename Array, typename... Args>
-    void array_mul(Array &dst, Array const &a, Array const &b, Args const &...args) {
+    void array_mul(Array &dst, Args const &...args) {
         size_t const size = dst.size();
-#pragma omp parallel for
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
-            dst[i] = a[i] * b[i] * (args[i] * ...);
+            dst[i] = (args[i] * ...);
         }
     }
 
-    template <typename Array>
-    void array_sub(Array &dst, Array const &a, Array const &b) {
-        DEBUG_MODE_ASSERT(b.size() == a.size() || dst.size() >= a.size(), "length of the array mismatch!");
+    template <typename Array1, typename Array2, typename Array3>
+    void array_sub(Array1 &dst, Array2 const &a, Array3 const &b) {
+        // DEBUG_MODE_ASSERT(b.size() == a.size() || dst.size() >= a.size(), "length of the array mismatch!");
+        // std::transform(a.begin(), a.end(), b.begin(), dst.begin(), [](auto x, auto y) { return x - y; });
         size_t const size = dst.size();
-#pragma omp parallel for
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
             dst[i] = a[i] - b[i];
         }
     }
 
+    template <typename Array1, typename Array2, typename Array3, typename Scalar>
+    void array_scale_sub(Array1 &dst, Array2 const &a, Array3 const &b, Scalar c) {
+        std::transform(a.begin(), a.end(), b.begin(), dst.begin(), [=](auto x, auto y) { return (x - y) * c; });
+    }
+
+    template <typename Array1, typename Array2, typename Array3>
+    void array_div(Array1 &dst, Array2 const &a, Array3 const &b) {
+        // DEBUG_MODE_ASSERT(b.size() == a.size() || dst.size() >= a.size(), "length of the array mismatch!");
+        size_t const size = dst.size();
+//#pragma omp parallel for
+#pragma GCC ivdep
+        for (size_t i = 0; i < size; i++) {
+            dst[i] = a[i] / b[i];
+        }
+    }
+
     template <typename Array>
     auto array_sum(Array const &array) {
+        // return std::reduce(array.begin(), array.end());
         typename Array::value_type total = 0;
+
         for (auto const &a : array) {
             total += a;
         }
         return total;
     }
 
-    template <typename Array>
-    void array_advance(Array &var, Array const &increment) {
+    template <typename Array1, typename Array2>
+    void array_advance(Array1 &var, Array2 const &increment) {
         size_t const size = var.size();
-
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
             var[i] += increment[i];
         }
     }
 
-    template <typename Scalar, typename Array>
-    void array_advance(Array &var, Array const &increment, Scalar step_size) {
+    template <typename Scalar, typename Array1, typename Array2>
+    void array_advance(Array1 &var, Array2 const &increment, Scalar step_size) {
         size_t const size = var.size();
-
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
             var[i] += increment[i] * step_size;
         }
     }
 
-    template <typename Scalar, typename Array>
-    void array_advance(Array &dst, Array const &var, Array const &increment, Scalar step_size) {
+    template <typename Scalar, typename Array1, typename Array2, typename Array3>
+    void array_advance(Array1 &dst, Array2 const &var, Array3 const &increment, Scalar step_size) {
         size_t const size = var.size();
-#pragma omp parallel for
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; i++) {
             dst[i] = var[i] + increment[i] * step_size;
         }
     }
 
-    template <typename Array, typename VectorArray>
-    void coord_dot(Array &dst, VectorArray const &a, VectorArray const &b) {
+    template <typename Array1, typename Array2>
+    void array_retreat(Array1 &var, Array2 const &increment) {
+        size_t const size = var.size();
+#pragma GCC ivdep
+        for (size_t i = 0; i < size; i++) {
+            var[i] -= increment[i];
+        }
+    }
+
+    template <typename Scalar, typename Array1, typename Array2>
+    void array_retreat(Array1 &var, Array2 const &increment, Scalar step_size) {
+        size_t const size = var.size();
+#pragma GCC ivdep
+        for (size_t i = 0; i < size; i++) {
+            var[i] -= increment[i] * step_size;
+        }
+    }
+
+    template <typename Scalar, typename Array1, typename Array2, typename Array3>
+    void array_retreat(Array1 &dst, Array2 const &var, Array3 const &increment, Scalar step_size) {
+        size_t const size = var.size();
+//#pragma omp parallel for
+#pragma GCC ivdep
+        for (size_t i = 0; i < size; i++) {
+            dst[i] = var[i] - increment[i] * step_size;
+        }
+    }
+
+    template <typename Array, typename VectorArray1, typename VectorArray2>
+    void coord_dot(Array &dst, VectorArray1 const &a, VectorArray2 const &b) {
         size_t const size = dst.size();
-#pragma omp parallel for
+//#pragma omp parallel for
+#pragma GCC ivdep
         for (size_t i = 0; i < size; ++i) {
             dst[i] = dot(a[i], b[i]);
         }
     }
 
-    template <typename Array, typename VectorArray>
-    auto coord_contract_to_scalar(Array &coef, VectorArray const &a, VectorArray const &b) {
+    template <typename Array, typename VectorArray1, typename VectorArray2>
+    auto coord_contract_to_scalar(Array &coef, VectorArray1 const &a, VectorArray2 const &b) {
         size_t const size = coef.size();
         typename Array::value_type sum{0};
 
@@ -275,10 +440,10 @@ namespace space::calc {
         return sum;
     }*/
 
-    template <typename VectorArray>
-    auto coord_contract_to_scalar(VectorArray const &a, VectorArray const &b) {
+    template <typename VectorArray1, typename VectorArray2>
+    auto coord_contract_to_scalar(VectorArray1 const &a, VectorArray2 const &b) {
         size_t const size = a.size();
-        typename VectorArray::value_type::value_type sum{0};
+        typename VectorArray1::value_type::value_type sum{0};
 
         for (size_t i = 0; i < size; ++i) {
             sum += dot(a[i], b[i]);
@@ -287,19 +452,21 @@ namespace space::calc {
     }
 
     template <typename ScalarArray, typename VectorArray>
-    inline auto calc_com(ScalarArray const &mass, VectorArray const &var) {
+    inline auto calc_com(ScalarArray const &mass, VectorArray const &var) -> typename VectorArray::value_type {
+        // typename VectorArray::value_type com = array_dot(var, mass) / array_sum(mass);//evaluate for lazy vecor
+        // otherwise will return an expression return com;
         return array_dot(var, mass) / array_sum(mass);
     }
 
     template <typename Array1, typename Array2>
     inline void move_to_com(Array1 const &mass, Array2 &var) {
         auto com_var = calc_com(mass, var);
-
+#pragma GCC ivdep
         for (auto &v : var) v -= com_var;
     }
 
     template <CONCEPT_PARTICLES_DATA Particles>
-    inline auto calc_kinetic_energy(Particles const &ptc) {
+    inline auto calc_kinetic_energy(Particles const &ptc) -> typename Particles::Scalar {
         return 0.5 * coord_contract_to_scalar(ptc.mass(), ptc.vel(), ptc.vel());
     }
 
@@ -320,63 +487,16 @@ namespace space::calc {
     CREATE_STATIC_MEMBER_CHECK(regu_type);
 
     template <CONCEPT_PARTICLES_DATA Particle>
-    auto calc_potential_energy(Particle const &particle1, Particle const &particle2) {
-        auto potential_eng = -consts::G * particle1.mass * particle2.mass;
+    auto calc_potential_energy(Particle const &particle1, Particle const &particle2) -> typename Particle::Scalar {
+        typename Particle::Scalar potential_eng = -consts::G * particle1.mass * particle2.mass;
         return potential_eng / norm(particle1.pos - particle2.pos);
     }
 
-    /*template <CONCEPT_PARTICLES Particles>
-    auto calc_potential_energy(Particles const &particles) {
-      typename Particles::Scalar potential_eng{0};
-      size_t const size = particles.number();
-      auto const &m = particles.mass();
-      auto const &v = particles.vel();
-      auto const &p = particles.pos();
-
-      if constexpr (HAS_METHOD(Particles, chain_pos) && HAS_METHOD(Particles, index)) {
-        auto const &ch_px = particles.chain_pos().x;
-        auto const &ch_py = particles.chain_pos().y;
-        auto const &ch_pz = particles.chain_pos().z;
-        auto const &idx = particles.index();
-
-        for (size_t i = 0; i < size - 1; ++i) {
-          potential_eng -=
-              m[idx[i]] * m[idx[i + 1]] / sqrt(ch_px[i] * ch_px[i] + ch_py[i] * ch_py[i] + ch_pz[i] * ch_pz[i]);
-        }
-
-        for (size_t i = 0; i < size - 2; ++i) {
-          auto dx = ch_px[i] + ch_px[i + 1];
-          auto dy = ch_py[i] + ch_py[i + 1];
-          auto dz = ch_pz[i] + ch_pz[i + 1];
-          potential_eng -= m[idx[i]] * m[idx[i + 2]] / sqrt(dx * dx + dy * dy + dz * dz);
-        }
-
-        for (size_t i = 0; i < size; ++i) {
-          for (size_t j = i + 3; j < size; ++j) {
-            auto dx = p.x[idx[j]] - p.x[idx[i]];
-            auto dy = p.y[idx[j]] - p.y[idx[i]];
-            auto dz = p.z[idx[j]] - p.z[idx[i]];
-            potential_eng -= m[idx[i]] * m[idx[j]] / sqrt(dx * dx + dy * dy + dz * dz);
-          }
-        }
-      } else {
-        for (size_t i = 0; i < size; ++i)
-          for (size_t j = i + 1; j < size; ++j) {
-            auto dx = p.x[i] - p.x[j];
-            auto dy = p.y[i] - p.y[j];
-            auto dz = p.z[i] - p.z[j];
-            potential_eng -= m[i] * m[j] / sqrt(dx * dx + dy * dy + dz * dz);
-          }
-      }
-      return potential_eng * consts::G;
-    }
-    */
     template <CONCEPT_PARTICLES_DATA Particles>
-    auto calc_potential_energy(Particles const &particles) {
+    auto calc_potential_energy(Particles const &particles) -> typename Particles::Scalar {
         typename Particles::Scalar potential_eng{0};
         size_t const size = particles.number();
         auto const &m = particles.mass();
-        auto const &v = particles.vel();
         auto const &p = particles.pos();
 
         if constexpr (HAS_METHOD(Particles, chain_pos) && HAS_METHOD(Particles, index)) {
@@ -388,20 +508,20 @@ namespace space::calc {
             }
 
             for (size_t i = 0; i < size - 2; ++i) {
-                auto dr = ch_p[i] + ch_p[i + 1];
+                decltype(ch_p[i]) dr = ch_p[i] + ch_p[i + 1];
                 potential_eng -= m[idx[i]] * m[idx[i + 2]] / norm(dr);
             }
 
             for (size_t i = 0; i < size; ++i) {
                 for (size_t j = i + 3; j < size; ++j) {
-                    auto dr = p[idx[j]] - p[idx[i]];
+                    decltype(p[idx[j]]) dr = p[idx[j]] - p[idx[i]];
                     potential_eng -= m[idx[i]] * m[idx[j]] / norm(dr);
                 }
             }
         } else {
             for (size_t i = 0; i < size; ++i)
                 for (size_t j = i + 1; j < size; ++j) {
-                    auto dr = p[i] - p[j];
+                    decltype(p[i]) dr = p[i] - p[j];
                     potential_eng -= m[i] * m[j] / norm(dr);
                 }
         }
@@ -409,7 +529,7 @@ namespace space::calc {
     }
 
     template <CONCEPT_PARTICLES_DATA Particles>
-    inline auto calc_total_energy(Particles const &particles) {
+    inline auto calc_total_energy(Particles const &particles) -> typename Particles::Scalar {
         return calc_potential_energy(particles) + calc_kinetic_energy(particles);
     }
 
@@ -423,17 +543,16 @@ namespace space::calc {
     inline auto calc_fall_free_time(ScalarArray const &mass, VectorArray const &position) {
         using Scalar = typename ScalarArray::value_type;
         size_t const size = mass.size();
-        Scalar min_fall_free = math::max_value<Scalar>::value;
+        Scalar min_fall_free = math::max_value<double>::value;  // TODO:
 
         for (size_t i = 0; i < size; i++) {
             for (size_t j = i + 1; j < size; j++) {
                 Scalar r = distance(position[i], position[j]);
-                Scalar fall_free = pow(r, 1.5) / sqrt(mass[i] + mass[j]);
-
+                Scalar fall_free = POW(r, 1.5) / sqrt(mass[i] + mass[j]);
                 if (fall_free < min_fall_free) min_fall_free = fall_free;
             }
         }
-        return min_fall_free * space::consts::pi * 0.5 / sqrt(2 * space::consts::G);
+        return min_fall_free * hub::consts::pi * 0.5 / sqrt(2 * hub::consts::G);
     }
 
     /**
@@ -445,20 +564,21 @@ namespace space::calc {
     template <CONCEPT_PARTICLES_DATA Particles>
     auto calc_step_scale(Particles const &particles) {
         if constexpr (HAS_STATIC_MEMBER(Particles, regu_type)) {
-            return particles.regu_function();
+            return particles.step_scale();
         } else {
-            return 1;
+            return 1.0;
         }
     }
 
     template <CONCEPT_PARTICLES_DATA Particles>
-    auto calc_energy_error(Particles const &particles, typename Particles::Scalar E0) {
-        auto U = -calc_potential_energy(particles);
-        auto T = calc_kinetic_energy(particles);
+    auto calc_energy_error(Particles const &particles, typename Particles::Scalar E0) -> typename Particles::Scalar {
+        using Scalar = typename Particles::Scalar;
+        Scalar U = -calc_potential_energy(particles);
+        Scalar T = calc_kinetic_energy(particles);
         if constexpr (HAS_METHOD(Particles, bindE) && HAS_STATIC_MEMBER(Particles, regu_type)) {
-            return log(fabs((T + particles.bindE()) / U));
+            return LOG(fabs((T + particles.bindE()) / U));
         } else {
             return fabs((T - U - E0) / E0);
         }
     }
-}  // namespace space::calc
+}  // namespace hub::calc

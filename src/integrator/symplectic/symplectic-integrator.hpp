@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -26,37 +26,46 @@ License
 
 #include "../../spacehub-concepts.hpp"
 /**
- * @namespace space::integrator
- * Documentation for space
+ * @namespace hub::integrator
+ * Documentation for hub
  */
-namespace space::integrator {
+namespace hub::integrator {
 
     /*---------------------------------------------------------------------------*\
     Class Symplectic2nd Declaration
 \*---------------------------------------------------------------------------*/
     /**
-     * Second order symplectic method.
+     * @brief Second symplectic method
+     *
+     * @tparam TypeSystem Type class of SpaceHub
      */
     template <typename TypeSystem>
     class Symplectic2nd {
        public:
         SPACEHUB_USING_TYPE_SYSTEM_OF(TypeSystem);
+
         /**
-         * Order of the integrator.
+         * @brief Order of the integrator
+         *
          */
         static constexpr size_t order{2};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
     };
 
+    /**
+     * @brief Drift-Kick-Drift Leapfrog method.
+     *
+     * @tparam TypeSystem Type class of SpaceHub.
+     */
     template <typename TypeSystem>
     using LeapFrogDKD = Symplectic2nd<TypeSystem>;
 
@@ -70,11 +79,11 @@ namespace space::integrator {
         static constexpr size_t order{2};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
@@ -95,11 +104,11 @@ namespace space::integrator {
         static constexpr size_t order{4};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
@@ -121,11 +130,11 @@ namespace space::integrator {
         static constexpr size_t order{6};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
@@ -147,11 +156,11 @@ namespace space::integrator {
         static constexpr size_t order{8};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
@@ -173,11 +182,11 @@ namespace space::integrator {
         static constexpr size_t order{10};
 
         /**
-         * @brief
+         * @brief Integrate the particle system with given step_size
          *
-         * @tparam ParticleSys
-         * @param system
-         * @param step_size
+         * @tparam ParticleSys Any types satisfy the particle system concept.
+         * @param[in,out] system Particle system needs to be integrated.
+         * @param[in] step_size Single step step size.
          */
         template <CONCEPT_PARTICLE_SYSTEM ParticleSys>
         void integrate(ParticleSys &system, typename ParticleSys::Scalar step_size);
@@ -352,4 +361,4 @@ namespace space::integrator {
         system.kick(6.1221934403867218e-01 * step_size);
         system.drift(3.0610967201933609e-01 * step_size);
     }
-}  // namespace space::integrator
+}  // namespace hub::integrator

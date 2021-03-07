@@ -11,10 +11,10 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
@@ -23,8 +23,10 @@ License
  * Header file.
  */
 #pragma once
+
 #include "../spacehub-concepts.hpp"
-namespace space::ode_iterator {
+
+namespace hub::ode {
 
     /*---------------------------------------------------------------------------*\
           Class ConstOdeIterator Declaration
@@ -55,4 +57,4 @@ namespace space::ode_iterator {
         integrator_.integrate(particles, macro_step_size);
         return macro_step_size;
     }
-}  // namespace space::ode_iterator
+}  // namespace hub::ode

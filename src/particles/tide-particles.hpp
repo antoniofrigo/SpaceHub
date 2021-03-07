@@ -11,14 +11,14 @@
 License
     This file is part of SpaceHub.
     SpaceHub is free software: you can redistribute it and/or modify it under
-    the terms of the MIT License. SpaceHub is distributed in the hope that it
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
     will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the MIT License
-    for more details. You should have received a copy of the MIT License along
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
     with SpaceHub.
 \*---------------------------------------------------------------------------*/
 /**
- * @file point-particles.hpp
+ * @file tide-particles.hpp
  *
  * Header file.
  */
@@ -27,14 +27,15 @@ License
 #include "../IO.hpp"
 #include "../spacehub-concepts.hpp"
 #include "../vector/vector3.hpp"
-namespace space::particle_set {
+namespace hub::particles {
 
     /*---------------------------------------------------------------------------*\
     Class TideParticle Declaration
     \*---------------------------------------------------------------------------*/
     /**
-     * @brief Point particle
-     * @tparam Real Floating point like type.
+     * @brief
+     *
+     * @tparam Vec3
      */
     template <typename Vec3>
     struct TideParticle {
@@ -51,29 +52,11 @@ namespace space::particle_set {
 
         SPACEHUB_MAKE_CONSTRUCTORS(TideParticle, default, default, default, default, default);
 
-        /**
-         * @brief Construct a new Point Particle object
-         *
-         * @param[in] mass The mass of the particle
-         * @param[in] position The 3D vector position of the particle
-         * @param[in] velocity The 3D vector velocity of the particle
-         */
-        explicit TideParticle(Scalar mass, Vector position, Vector velocity, Scalar apsidal_motion_const,
+        explicit TideParticle(Scalar mass, Vector position, Vector velocity, Scalar r, Scalar apsidal_motion_const,
                               Scalar lag_time);
 
-        /**
-         * @brief Construct a new Point Particle object
-         *
-         * @param[in] mass The mass fof the particle
-         * @param[in] px The x-component of the position vector
-         * @param[in] py The y-component of the position vector
-         * @param[in] pz The z-component of the position vector
-         * @param[in] vx The x-component of the velocity vector
-         * @param[in] vy The y-component of the velocity vector
-         * @param[in] vz The z-component of the velocity vector
-         */
         explicit TideParticle(Scalar mass, Scalar px = 0, Scalar py = 0, Scalar pz = 0, Scalar vx = 0, Scalar vy = 0,
-                              Scalar vz = 0, Scalar apsidal_motion_const = 0, Scalar lag_time = 0);
+                              Scalar vz = 0, Scalar r = 0, Scalar apsidal_motion_const = 0, Scalar lag_time = 0);
 
         // public members
         /**
@@ -92,6 +75,12 @@ namespace space::particle_set {
         Scalar mass;
 
         /**
+         * @brief
+         *
+         */
+        Scalar radius;
+
+        /**
          * @brief Apsidal motion constant
          */
         Scalar tide_apsidal_const;
@@ -108,7 +97,7 @@ namespace space::particle_set {
     /**
      * @brief Structure of Array point particle group.
      *
-     * @tparam TypeSystem The type system in spaceHub(space::Types).
+     * @tparam TypeSystem The type system in spaceHub(hub::Types).
      */
     template <typename TypeSystem>
     class TideParticles {
@@ -135,15 +124,17 @@ namespace space::particle_set {
         TideParticles(Scalar t, STL const &particle_set);
 
         // Public methods
-        SPACEHUB_STD_ACCESSOR(Scalar, time, time_);
+        SPACEHUB_STD_ACCESSOR(StateScalar, time, time_);
 
         SPACEHUB_ARRAY_ACCESSOR(ScalarArray, mass, mass_);
 
+        SPACEHUB_ARRAY_ACCESSOR(ScalarArray, radius, radius_);
+
         SPACEHUB_ARRAY_ACCESSOR(IdxArray, idn, idn_);
 
-        SPACEHUB_ARRAY_ACCESSOR(VectorArray, pos, pos_);
+        SPACEHUB_ARRAY_ACCESSOR(StateVectorArray, pos, pos_);
 
-        SPACEHUB_ARRAY_ACCESSOR(VectorArray, vel, vel_);
+        SPACEHUB_ARRAY_ACCESSOR(StateVectorArray, vel, vel_);
 
         SPACEHUB_ARRAY_ACCESSOR(VectorArray, tide_apsidal_const, k_AM_);
 
@@ -155,9 +146,9 @@ namespace space::particle_set {
 
         void emplace_back(Particle const &new_particle);
 
-        [[nodiscard]] size_t number() const;
+           size_t number() const;
 
-        [[nodiscard]] size_t capacity() const;
+           size_t capacity() const;
 
         void clear();
 
@@ -171,11 +162,13 @@ namespace space::particle_set {
 
        private:
         // Private members
-        VectorArray pos_;
+        StateVectorArray pos_;
 
-        VectorArray vel_;
+        StateVectorArray vel_;
 
         ScalarArray mass_;
+
+        ScalarArray radius_;
 
         ScalarArray k_AM_;
 
@@ -183,42 +176,48 @@ namespace space::particle_set {
 
         IdxArray idn_;
 
-        Scalar time_{0.0};
+        StateScalar time_{0.0};
 
         size_t active_num_{0};
     };
-}  // namespace space::particle_set
+}  // namespace hub::particles
 
-namespace space::particle_set {
+namespace hub::particles {
 
     /*---------------------------------------------------------------------------*\
         Class TideParticle Implementation
     \*---------------------------------------------------------------------------*/
     template <typename Vec3>
-    TideParticle<Vec3>::TideParticle(Scalar m, Vec3 position, Vec3 velocity, Scalar apsidal_motion_const,
+    TideParticle<Vec3>::TideParticle(Scalar m, Vec3 position, Vec3 velocity, Scalar r, Scalar apsidal_motion_const,
                                      Scalar lag_time)
-        : pos(position), vel(velocity), mass(m), tide_apsidal_const(apsidal_motion_const), tide_lag_time(lag_time) {}
+        : pos(position),
+          vel(velocity),
+          mass(m),
+          radius(r),
+          tide_apsidal_const(apsidal_motion_const),
+          tide_lag_time(lag_time) {}
 
     template <typename Vec3>
     TideParticle<Vec3>::TideParticle(Scalar m, Scalar px, Scalar py, Scalar pz, Scalar vx, Scalar vy, Scalar vz,
-                                     Scalar apsidal_motion_const, Scalar lag_time)
+                                     Scalar r, Scalar apsidal_motion_const, Scalar lag_time)
         : pos(px, py, pz),
           vel(vx, vy, vz),
           mass(m),
+          radius(r),
           tide_apsidal_const(apsidal_motion_const),
           tide_lag_time(lag_time) {}
 
     template <typename Vec3>
     std::ostream &operator<<(std::ostream &os, TideParticle<Vec3> const &particle) {
-        space::print_csv(os, particle.mass, particle.pos, particle.vel, particle.tide_apsidal_const,
-                         particle.tide_lag_time);
+        hub::print_csv(os, particle.mass, particle.radius, particle.pos, particle.vel, particle.tide_apsidal_const,
+                       particle.tide_lag_time);
         return os;
     }
 
     template <typename Vec3>
     std::istream &operator>>(std::istream &is, TideParticle<Vec3> &particle) {
-        space::input(is, particle.mass, particle.pos, particle.vel, particle.tide_apsidal_const,
-                     particle.tide_lag_time);
+        hub::input(is, particle.mass, particle.radius, particle.pos, particle.vel, particle.tide_apsidal_const,
+                   particle.tide_lag_time);
         return is;
     }
 
@@ -235,6 +234,7 @@ namespace space::particle_set {
             pos_.emplace_back(p.pos);
             vel_.emplace_back(p.vel);
             mass_.emplace_back(p.mass);
+            radius_.emplace_back(p.radius);
             k_AM_.emplace_back(p.tide_apsidal_const);
             tau_lag_.emplace_back(p.tide_lag_time);
             idn_.emplace_back(id++);
@@ -245,18 +245,18 @@ namespace space::particle_set {
 
     template <typename TypeSystem>
     void TideParticles<TypeSystem>::resize(size_t new_sz) {
-        space::resize_all(new_sz, pos_, vel_, mass_, k_AM_, tau_lag_, idn_);
+        hub::resize_all(new_sz, pos_, vel_, mass_, radius_, k_AM_, tau_lag_, idn_);
         active_num_ = new_sz;
     }
 
     template <typename TypeSystem>
     void TideParticles<TypeSystem>::reserve(size_t new_cap) {
-        space::reserve_all(new_cap, pos_, vel_, mass_, k_AM_, tau_lag_, idn_);
+        hub::reserve_all(new_cap, pos_, vel_, mass_, radius_, k_AM_, tau_lag_, idn_);
     }
 
     template <typename TypeSystem>
     void TideParticles<TypeSystem>::clear() {
-        space::clear_all(pos_, vel_, mass_, k_AM_, tau_lag_, idn_);
+        hub::clear_all(pos_, vel_, mass_, radius_, k_AM_, tau_lag_, idn_);
         active_num_ = 0;
     }
 
@@ -265,6 +265,7 @@ namespace space::particle_set {
         pos_.emplace_back(new_particle.pos);
         vel_.emplace_back(new_particle.vel);
         mass_.emplace_back(new_particle.mass);
+        radius_.emplace_back(new_particle.radius);
         k_AM_.emplace_back(new_particle.tide_apsidal_const);
         tau_lag_.emplace_back(new_particle.tide_lag_time);
         idn_.emplace_back(this->number());
@@ -283,16 +284,16 @@ namespace space::particle_set {
 
     template <typename TypeSystem>
     std::string TideParticles<TypeSystem>::column_names() const {
-        return "time,id,mass,k_AM,tau_lag,px,py,pz,vx,vy,vz";
+        return "time,id,mass,radius,k_AM,tau_lag,px,py,pz,vx,vy,vz";
     }
 
     template <typename TypeSystem>
     std::ostream &operator<<(std::ostream &os, TideParticles<TypeSystem> const &ps) {
         size_t num = ps.number();
         for (size_t i = 0; i < num; ++i) {
-            space::print(os, ps.time(), ',', ps.idn(i), ',', ps.mass(i), ',', ps.tide_apsidal_const(i), ',',
-                         ps.tide_lag_time(i), ',', ps.pos(i), ',', ps.vel(i), '\n');
+            hub::print(os, ps.time(), ',', ps.idn(i), ',', ps.mass(i), ',', ps.radius(i), ',',
+                       ps.tide_apsidal_const(i), ',', ps.tide_lag_time(i), ',', ps.pos(i), ',', ps.vel(i), '\n');
         }
         return os;
     }
-}  // namespace space::particle_set
+}  // namespace hub::particles

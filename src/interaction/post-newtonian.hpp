@@ -1,20 +1,58 @@
-//
-// Created by 王艺涵 on 4/12/19.
-//
-
+/*---------------------------------------------------------------------------*\
+        .-''''-.         |
+       /        \        |
+      /_        _\       |  SpaceHub: The Open Source N-body Toolkit
+     // \  <>  / \\      |
+     |\__\    /__/|      |  Website:  https://yihanwangastro.github.io/SpaceHub/
+      \    ||    /       |
+        \  __  /         |  Copyright (C) 2019 Yihan Wang
+         '.__.'          |
+---------------------------------------------------------------------
+License
+    This file is part of SpaceHub.
+    SpaceHub is free software: you can redistribute it and/or modify it under
+    the terms of the GPL-3.0 License. SpaceHub is distributed in the hope that it
+    will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GPL-3.0 License
+    for more details. You should have received a copy of the GPL-3.0 License along
+    with SpaceHub.
+\*---------------------------------------------------------------------------*/
+/**
+ * @file post-newtonian.hpp
+ *
+ * Header file.
+ */
 #pragma once
 
 #include "../dev-tools.hpp"
 #include "interaction.hpp"
 
-namespace space::interactions {
+namespace hub::force {
 
     // pair-wise Post-Newtonian term in Centre of mass reference frame. on page 76. https://arxiv.org/pdf/1310.1528.pdf
+
+    /**
+     * @brief First order Post-Newtonian term for general relativity.
+     *
+     */
     class PN1 {
        public:
+        /**
+         * @brief Is this force velocity dependent?
+         *
+         */
         constexpr static bool vel_dependent{true};
 
         // Type members
+        /**
+         * @brief Add acceleration from first order post-newtonian term to existing 3D vector array.
+         *
+         * @note this method ADD acceleration TO input 'acceleration'.
+         *
+         * @tparam Particles Particle system type satisfy concept particle system.
+         * @param[in] particles Particle system that is used to evaluated the acceleration.
+         * @param[in,out] acceleration 3D vector array to be updated.
+         */
         template <typename Particles>
         static void add_acc_to(Particles const &particles, typename Particles::VectorArray &acceleration);
 
@@ -28,8 +66,22 @@ namespace space::interactions {
 
     class PN2 {
        public:
+        /**
+         * @brief Is this force velocity dependent?
+         *
+         */
         constexpr static bool vel_dependent{true};
+
         // Type members
+        /**
+         * @brief Add acceleration from second order post-newtonian term to existing 3D vector array.
+         *
+         * @note this method ADD acceleration TO input 'acceleration'.
+         *
+         * @tparam Particles Particle system type satisfy concept particle system.
+         * @param[in] particles Particle system that is used to evaluated the acceleration.
+         * @param[in,out] acceleration 3D vector array to be updated.
+         */
         template <typename Particles>
         static void add_acc_to(Particles const &particles, typename Particles::VectorArray &acceleration);
 
@@ -43,8 +95,22 @@ namespace space::interactions {
 
     class PN2p5 {
        public:
+        /**
+         * @brief Is this force velocity dependent?
+         *
+         */
         constexpr static bool vel_dependent{true};
+
         // Type members
+        /**
+         * @brief Add acceleration from two point five order post-newtonian term to existing 3D vector array.
+         *
+         * @note this method ADD acceleration TO input 'acceleration'.
+         *
+         * @tparam Particles Particle system type satisfy concept particle system.
+         * @param[in] particles Particle system that is used to evaluated the acceleration.
+         * @param[in,out] acceleration 3D vector array to be updated.
+         */
         template <typename Particles>
         static void add_acc_to(Particles const &particles, typename Particles::VectorArray &acceleration);
 
@@ -63,14 +129,14 @@ namespace space::interactions {
     constexpr double INV_C5 = INV_C2 * INV_C3;
 
     /*---------------------------------------------------------------------------*\
-          Class PN1 Implememtation
+          Class PN1 Implementation
     \*---------------------------------------------------------------------------*/
     template <typename Particles>
     void PN1::add_acc_to(const Particles &particles, typename Particles::VectorArray &acceleration) {
         size_t num = particles.number();
-        auto &p = particles.pos();
-        auto &v = particles.vel();
-        auto &m = particles.mass();
+        auto const &p = particles.pos();
+        auto const &v = particles.vel();
+        auto const &m = particles.mass();
 
         auto force = [&](auto const &dr, auto const &dv, auto i, auto j) {
             auto r2 = norm2(dr);
@@ -97,8 +163,8 @@ namespace space::interactions {
 
             auto coef = consts::G / r2 * INV_C2;
 
-            acceleration[i] += coef * m[j] * (Ai * n - Bi * dv);
-            acceleration[j] -= coef * m[i] * (Aj * n - Bj * dv);
+            acceleration[i] += (coef * m[j]) * (Ai * n - Bi * dv);
+            acceleration[j] -= (coef * m[i]) * (Aj * n - Bj * dv);
         };
 
         if constexpr (HAS_METHOD(Particles, chain_pos) && HAS_METHOD(Particles, index) &&
@@ -132,14 +198,14 @@ namespace space::interactions {
     }
 
     /*---------------------------------------------------------------------------*\
-              Class PN2 Implememtation
+              Class PN2 Implementation
     \*---------------------------------------------------------------------------*/
     template <typename Particles>
     void PN2::add_acc_to(const Particles &particles, typename Particles::VectorArray &acceleration) {
         size_t num = particles.number();
-        auto &p = particles.pos();
-        auto &v = particles.vel();
-        auto &m = particles.mass();
+        auto const &p = particles.pos();
+        auto const &v = particles.vel();
+        auto const &m = particles.mass();
 
         auto force = [&](auto const &dr, auto const &dv, auto i, auto j) {
             auto r2 = norm2(dr);
@@ -216,28 +282,23 @@ namespace space::interactions {
             }
         }
     }
+
     /*---------------------------------------------------------------------------*\
-          Class PN2.5 Implememtation
+          Class PN2.5 Implementation
     \*---------------------------------------------------------------------------*/
     template <typename Particles>
     void PN2p5::add_acc_to(const Particles &particles, typename Particles::VectorArray &acceleration) {
         size_t num = particles.number();
-        auto &p = particles.pos();
-        auto &v = particles.vel();
-        auto &m = particles.mass();
+        auto const &p = particles.pos();
+        auto const &v = particles.vel();
+        auto const &m = particles.mass();
 
         auto force = [&](auto const &dr, auto const &dv, auto i, auto j) {
             auto r2 = norm2(dr);
             auto r = sqrt(r2);
             auto n = -dr / r;
 
-            auto v1s = norm2(v[i]);
-            auto v2s = norm2(v[j]);
-            auto v12 = dot(v[i], v[j]);
             auto dv2 = norm2(dv);
-
-            /*auto nv1 = dot(n, v[i]);
-            auto nv2 = dot(n, v[j]);*/
 
             auto nv = -dot(n, dv);
 
@@ -287,4 +348,4 @@ namespace space::interactions {
             }
         }
     }
-}  // namespace space::interactions
+}  // namespace hub::force
