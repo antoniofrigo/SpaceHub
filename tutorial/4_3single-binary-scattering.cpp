@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
 
         /*--------------------------------------------------New-----------------------------------------------------------*/
 
-        auto binary_orb = EllipOrbit(p1.mass, p2.mass, 5_AU, 0.0, isotherm, isotherm, isotherm, isotherm);
+        auto binary_orb = Elliptic(p1.mass, p2.mass, 5_AU, 0.0, isotherm, isotherm, isotherm, isotherm);
 
         move_particles(binary_orb, p2);
 
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 
         args.add_stop_condition(t_end);
         /*----------------------------------------------------------------------------------------------------------------*/
-        // [&] capture all variables in lambda in reference
+        // [&] capture all variables in lambda by reference
         args.add_stop_point_operation([&](auto& ptc, auto h) {
             // print the end state of the system into file
             print(file, binary_orb, ',', orb, ',', ptc, '\n');
