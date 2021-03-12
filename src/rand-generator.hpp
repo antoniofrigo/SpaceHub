@@ -66,6 +66,18 @@ namespace hub::random {
     }
 
     /**
+     * @brief Rayleigh distributed random number generator
+     *
+     * @param[in] sigma The scale factor of the distribution.
+     * @return double The generated number.
+     */
+    inline static double Rayleigh(double sigma) {
+        static thread_local std::mt19937 generator{std::random_device{}()};
+        std::uniform_real_distribution<double> dist{0.0, 1.0};
+        return sigma * sqrt(-2.0e0 * log(dist(generator)));
+    }
+
+    /**
      * @brief Power law distributed random number generator
      *
      * @param[in] power The power of the power law

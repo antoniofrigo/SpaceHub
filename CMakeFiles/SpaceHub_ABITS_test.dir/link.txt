@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++17 -O3 -Wall -pthread CMakeFiles/SpaceHub_ABITS_test.dir/test/regression_test/rtest_AR_ABITS.cpp.o -o SpaceHub_ABITS_test 

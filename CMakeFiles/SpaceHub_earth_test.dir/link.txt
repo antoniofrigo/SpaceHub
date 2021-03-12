@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++17 -O3 -Wall -pthread CMakeFiles/SpaceHub_earth_test.dir/test/regression_test/rtest_earth-system.cpp.o -o SpaceHub_earth_test 

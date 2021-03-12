@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=c++17 -O3 -Wall -pthread CMakeFiles/SpaceHub_simple_test.dir/test/regression_test/rtest_basic.cpp.o -o SpaceHub_simple_test 

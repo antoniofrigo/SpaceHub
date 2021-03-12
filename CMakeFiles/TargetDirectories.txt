@@ -1,0 +1,13 @@
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/edit_cache.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_solar_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_PN_p_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_twobody_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_earth_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_kozai_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_unit_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_PN_r_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_improve_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_ABITS_test.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/rebuild_cache.dir
+/home/antonio/projects/rocky_planet_collisions/SpaceHub/CMakeFiles/SpaceHub_simple_test.dir
