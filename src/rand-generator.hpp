@@ -66,14 +66,25 @@ namespace hub::random {
     }
 
     /**
+     * @brief Signum function generator
+     *
+     * @return double The generated number.
+     */
+    inline static int Signum() {
+        static thread_local std::mt19937 generator{std::random_device{}()};
+        std::uniform_int_distribution<int> dist{0, 1};
+        return 2 * dist(generator) - 1;
+    }
+
+    /**
      * @brief Rayleigh distributed random number generator
      *
      * @param[in] sigma The scale factor of the distribution.
      * @return double The generated number.
      */
-    inline static double Rayleigh(double sigma) {
+    inline static double Rayleigh(double sigma, double cutoff = 1) {
         static thread_local std::mt19937 generator{std::random_device{}()};
-        std::uniform_real_distribution<double> dist{0.0, 1.0};
+        std::uniform_real_distribution<double> dist{EXP(-cutoff * 1.0 /(2.0 * sigma * sigma)), 1.0};
         return sigma * sqrt(-2.0e0 * log(dist(generator)));
     }
 

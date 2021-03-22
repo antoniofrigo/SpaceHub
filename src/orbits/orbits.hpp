@@ -703,6 +703,27 @@ namespace hub::orbit {
     inline Scalar calc_eccentricity(Scalar u, Vector const &dr, Vector const &dv) {
         return norm(dr * (norm2(dv) - u * re_norm(dr)) - dv * dot(dr, dv)) / u;
     }
+    /**
+     * @brief Calculate eccentricity of orbit of two bodies given scalar and 
+     * vector inputs.
+     *
+     * @tparam Vector, Scalar
+     * @param[in] m1 
+     * @param[in] m2
+     * @param[in] p1
+     * @param[in] p2
+     * @param[in] v1
+     * @param[in] v2
+     * @return auto
+     */
+
+    template <typename Vector, typename Scalar>
+    inline auto calc_eccentricity_coord(Scalar m1, Scalar m2, Vector p1, Vector p2, Vector v1, Vector v2) {
+        auto dp = p1 - p2;
+        auto dv = v1 - v2;
+        return calc_eccentricity(consts::G * (m1 + m2), dp, dv);
+    }
+
     /*
         template <typename Scalar>
         inline auto calc_eccentricity(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar dvz) {
