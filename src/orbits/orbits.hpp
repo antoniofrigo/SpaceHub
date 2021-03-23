@@ -736,6 +736,45 @@ namespace hub::orbit {
         Scalar r = norm(dr);
         return -u * r / (r * norm2(dv) - 2 * u);
     }
+
+    /**
+     * @brief Calculate eccentricity of orbit of two bodies given scalar and 
+     * vector inputs.
+     *
+     * @tparam Vector, Scalar
+     * @param[in] m1 
+     * @param[in] m2
+     * @param[in] p1
+     * @param[in] p2
+     * @param[in] v1
+     * @param[in] v2
+     * @return auto
+     */
+
+    template <typename Vector, typename Scalar>
+    inline auto calc_semi_major_axis_coord(Scalar m1, Scalar m2, Vector p1, Vector p2, Vector v1, Vector v2) {
+        auto dp = p1 - p2;
+        auto dv = v1 - v2;
+        return calc_semi_major_axis(consts::G * (m1 + m2), dp, dv);
+    }
+
+    /**
+     * @brief Calculate the eccentricity of p2 relative to p1, assuming reference x-y plane
+     *
+     * @tparam Vector
+     * @param[in] p1 
+     * @param[in] p2
+     * @return auto
+     */
+
+    template <typename Vector>
+    inline double calc_inclination_coord(Vector p1, Vector p2) {
+        auto x = p2.x - p1.x;
+        auto y = p2.y - p1.y;
+        auto z = p2.z - p1.z;
+        return atan( z/sqrt(x * x + y * y));
+    }
+
     /*
         template <typename Scalar>
         inline Scalar calc_semi_major_axis(Scalar u, Scalar dx, Scalar dy, Scalar dz, Scalar dvx, Scalar dvy, Scalar
